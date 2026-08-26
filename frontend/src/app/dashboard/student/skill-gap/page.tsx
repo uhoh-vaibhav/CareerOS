@@ -6,9 +6,44 @@ import { TopNav } from "@/components/TopNav";
 import { Card } from "@/components/Card";
 import { analyzeSkillGapRequest, SkillGapResult } from "@/lib/api";
 
-// Matches the seed role-skills table in ai-service/app/services/skill_gap_service.py.
+// Matches the role-skills table in ai-service/app/services/skill_gap_service.py.
 // Free text is accepted too, but these are guaranteed to have real gap data behind them.
-const KNOWN_ROLES = ["Backend Developer", "Frontend Developer", "Data Analyst", "Full Stack Developer"];
+const KNOWN_ROLES = [
+  // Software Engineering
+  "Backend Developer",
+  "Frontend Developer",
+  "Full Stack Developer",
+  "Software Engineer",
+  "Mobile App Developer",
+  "Android Developer",
+  "iOS Developer",
+  // Data & AI / ML
+  "Data Analyst",
+  "Data Scientist",
+  "Data Engineer",
+  "Machine Learning Engineer",
+  "AI Engineer",
+  // Cloud & DevOps
+  "DevOps Engineer",
+  "Cloud Engineer",
+  "Site Reliability Engineer",
+  // Security
+  "Cybersecurity Analyst",
+  "Penetration Tester",
+  // QA & Testing
+  "QA Engineer",
+  // Design & Product
+  "UI/UX Designer",
+  "Product Manager",
+  // Database
+  "Database Administrator",
+  // Blockchain & Emerging
+  "Blockchain Developer",
+  // Networking
+  "Network Engineer",
+  // Business Intelligence
+  "Business Analyst",
+];
 
 export default function SkillGapPage() {
   const [targetRole, setTargetRole] = useState(KNOWN_ROLES[0]);

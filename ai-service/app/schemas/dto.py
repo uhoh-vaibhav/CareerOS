@@ -8,6 +8,7 @@ class ResumeParseRequest(BaseModel):
 class ResumeParseResponse(BaseModel):
     skills: list[str]
     ats_score: int
+    ats_breakdown: dict[str, int]
     feedback: str
 
 

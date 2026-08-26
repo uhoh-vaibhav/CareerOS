@@ -10,6 +10,8 @@ import { authRouter } from "./modules/auth/auth.routes";
 import { adminRouter } from "./modules/admin/admin.routes";
 import { resumeRouter } from "./modules/student/resume.routes";
 import { skillGapRouter } from "./modules/student/skillgap.routes";
+import { mentorRouter } from "./modules/student/mentor.routes";
+import { readinessRouter } from "./modules/student/readiness.routes";
 
 export function createApp() {
   const app = express();
@@ -30,8 +32,10 @@ export function createApp() {
   app.use("/api/v1/admin", adminRouter);
   app.use("/api/v1/student/resume", resumeRouter);
   app.use("/api/v1/student/skill-gap", skillGapRouter);
-  // Additional module routers (mentor, recruiter, placement, faculty) get
-  // mounted here following the same pattern.
+  app.use("/api/v1/student/mentor", mentorRouter);
+  app.use("/api/v1/student/readiness", readinessRouter);
+  // Additional module routers (recruiter, placement, faculty) get mounted
+  // here following the same pattern.
 
   app.use(errorHandler);
 

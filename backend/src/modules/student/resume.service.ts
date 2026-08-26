@@ -16,6 +16,7 @@ interface UploadedFile {
 interface AiParseResult {
   skills: string[];
   ats_score: number;
+  ats_breakdown: Record<string, number>;
   feedback: string;
 }
 
@@ -49,7 +50,7 @@ export async function uploadAndParseResume(userId: string, file: UploadedFile) {
     data: {
       profileId: profile.id,
       fileUrl,
-      parsedJson: { skills: parsed.skills, feedback: parsed.feedback },
+      parsedJson: { skills: parsed.skills, feedback: parsed.feedback, ats_breakdown: parsed.ats_breakdown },
       atsScore: parsed.ats_score,
     },
   });
