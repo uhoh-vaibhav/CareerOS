@@ -15,7 +15,7 @@ interface LoginInput {
   password: string;
 }
 
-export async function registerUser({ email, password }: RegisterInput) {
+export async function registerUser({ email, password, role = Role.STUDENT }: RegisterInput) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     throw new ApiError(409, "An account with this email already exists");
@@ -26,8 +26,8 @@ export async function registerUser({ email, password }: RegisterInput) {
     data: {
       email,
       passwordHash,
-      role: Role.STUDENT,
-      profile: { create: {} },
+      role,
+      profile: role === Role.STUDENT ? { create: {} } : undefined,
     },
   });
 

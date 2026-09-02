@@ -1,6 +1,13 @@
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-const STUDENT_LINKS: { label: string; href: string }[] = [
+export interface NavLink {
+  label: string;
+  href: string;
+}
+
+export const STUDENT_LINKS: NavLink[] = [
   { label: "Overview", href: "/dashboard/student" },
   { label: "Resume", href: "/dashboard/student/resume" },
   { label: "Skill Gap", href: "/dashboard/student/skill-gap" },
@@ -11,18 +18,53 @@ const STUDENT_LINKS: { label: string; href: string }[] = [
   { label: "Certificates", href: "/dashboard/student/certificates" },
 ];
 
-export function Sidebar({ links = STUDENT_LINKS }: { links?: typeof STUDENT_LINKS }) {
+export const ADMIN_LINKS: NavLink[] = [
+  { label: "Overview", href: "/dashboard/admin" },
+  { label: "Users", href: "/dashboard/admin/users" },
+];
+
+export const RECRUITER_LINKS: NavLink[] = [
+  { label: "Overview", href: "/dashboard/recruiter" },
+  { label: "Job Postings", href: "/dashboard/recruiter/jobs" },
+];
+
+export const PLACEMENT_LINKS: NavLink[] = [
+  { label: "Overview", href: "/dashboard/placement" },
+  { label: "Students", href: "/dashboard/placement/students" },
+  { label: "Drives", href: "/dashboard/placement/drives" },
+];
+
+export const FACULTY_LINKS: NavLink[] = [
+  { label: "Overview", href: "/dashboard/faculty" },
+  { label: "Students", href: "/dashboard/faculty/students" },
+];
+
+export function Sidebar({ links }: { links: NavLink[] }) {
+  const pathname = usePathname();
+
   return (
-    <aside className="w-48 bg-ice p-4">
-      <ul className="space-y-3 text-sm text-navy font-medium">
-        {links.map((link) => (
-          <li key={link.href}>
-            <Link href={link.href} className="hover:text-accent">
+    <aside className="w-64 bg-navy text-white min-h-screen p-4 flex flex-col">
+      <div className="mb-8">
+        <h2 className="text-xl font-bold text-ice"></h2>
+      </div>
+      <nav className="flex flex-col gap-2">
+        {links.map((link) => {
+          const isActive = pathname === link.href;
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`p-2 rounded ${
+                isActive ? "bg-accent" : "hover:bg-accent/50"
+              }`}
+            >
               {link.label}
             </Link>
-          </li>
-        ))}
-      </ul>
+          );
+        })}
+      </nav>
     </aside>
   );
 }
+
+export default Sidebar;

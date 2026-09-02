@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-1.5-flash"
 
+    # Embedding model used by the Pinecone adapter (Pinecone doesn't embed
+    # text itself — we call OpenAI's embedding API before upserting/querying).
+    # Ignored when VECTOR_STORE != "pinecone".
+    embedding_provider: str = "openai"
+    openai_embedding_model: str = "text-embedding-3-small"
+    openai_embedding_dimensions: int = 1536
+
     # "chroma" | "pinecone" | "mock"
     vector_store: str = "mock"
     chroma_persist_dir: str = "./.chroma"

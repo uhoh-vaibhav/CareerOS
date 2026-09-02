@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
+import { Sidebar, STUDENT_LINKS } from "@/components/Sidebar";
 import { TopNav } from "@/components/TopNav";
 import { sendMentorMessageRequest, getMentorHistoryRequest, MentorSession } from "@/lib/api";
 
@@ -70,7 +70,7 @@ export default function MentorPage() {
     <div className="min-h-screen flex flex-col">
       <TopNav role="Student" />
       <div className="flex flex-1">
-        <Sidebar />
+        <Sidebar links={STUDENT_LINKS} />
         <main className="flex-1 p-6 bg-white flex flex-col max-w-3xl">
           <h1 className="text-2xl font-bold text-navy mb-1">AI Career Mentor</h1>
           <p className="text-sm text-gray-600 mb-4">

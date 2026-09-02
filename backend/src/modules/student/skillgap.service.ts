@@ -36,6 +36,15 @@ export async function analyzeSkillGap(userId: string, targetRole: string) {
 
   const aiResult = await callAiSkillGapService(profile.id, currentSkills, targetRole);
 
+  // Parse the roadmap string into structured milestones.
+  let milestones: Record<string, unknown>[];
+  try {
+    const parsed = JSON.parse(aiResult.roadmap);
+    milestones = Array.isArray(parsed) ? parsed : [{ step: 1, title: "General Learning", description: aiResult.roadmap, skills: [], resources: [], estimatedWeeks: 4 }];
+  } catch {
+    milestones = [{ step: 1, title: "General Learning", description: aiResult.roadmap, skills: [], resources: [], estimatedWeeks: 4 }];
+  }
+
   const report = await prisma.skillGapReport.create({
     data: {
       profileId: profile.id,
@@ -43,7 +52,7 @@ export async function analyzeSkillGap(userId: string, targetRole: string) {
       missingSkills: aiResult.missing_skills,
       roadmap: {
         create: {
-          milestones: { text: aiResult.roadmap },
+          milestones: milestones as any,
           progressPct: 0,
         },
       },

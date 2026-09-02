@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/Card";
-import { Sidebar } from "@/components/Sidebar";
+import { Sidebar, STUDENT_LINKS } from "@/components/Sidebar";
 import { TopNav } from "@/components/TopNav";
 import {
   getReadinessScoreRequest,
@@ -71,7 +71,7 @@ export default function StudentDashboardPage() {
     <div className="min-h-screen flex flex-col">
       <TopNav role="Student" />
       <div className="flex flex-1">
-        <Sidebar />
+        <Sidebar links={STUDENT_LINKS} />
         <main className="flex-1 p-6 space-y-4 bg-white">
           {/* ── Readiness Score Card ── */}
           <Card title="Career Readiness Score" tone="gold">

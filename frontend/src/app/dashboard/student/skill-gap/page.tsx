@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
+import { Sidebar, STUDENT_LINKS } from "@/components/Sidebar";
 import { TopNav } from "@/components/TopNav";
 import { Card } from "@/components/Card";
 import { analyzeSkillGapRequest, SkillGapResult } from "@/lib/api";
@@ -68,7 +68,7 @@ export default function SkillGapPage() {
     <div className="min-h-screen flex flex-col">
       <TopNav role="Student" />
       <div className="flex flex-1">
-        <Sidebar />
+        <Sidebar links={STUDENT_LINKS} />
         <main className="flex-1 p-6 space-y-4 bg-white max-w-2xl">
           <h1 className="text-2xl font-bold text-navy">Skill Gap Analysis</h1>
           <p className="text-sm text-gray-600">
@@ -145,7 +145,35 @@ export default function SkillGapPage() {
               </Card>
 
               <Card title="Learning Roadmap" tone="green">
-                <p>{result.report.roadmap?.milestones.text ?? "No roadmap generated."}</p>
+                {(() => {
+                  const milestones = result.report.roadmap?.milestones;
+                  if (!milestones || (Array.isArray(milestones) && milestones.length === 0)) {
+                    return <p>No roadmap generated.</p>;
+                  }
+                  if (Array.isArray(milestones)) {
+                    return (
+                      <div className="space-y-2">
+                        {milestones.slice(0, 3).map((m: any, i: number) => (
+                          <div key={i} className="flex gap-2 text-sm">
+                            <span className="font-semibold text-navy flex-shrink-0">Step {m.step}:</span>
+                            <span className="text-gray-700">{m.title}</span>
+                          </div>
+                        ))}
+                        {milestones.length > 3 && (
+                          <p className="text-xs text-gray-400">+{milestones.length - 3} more steps</p>
+                        )}
+                        <a
+                          href="/dashboard/student/roadmap"
+                          className="inline-block mt-1 text-xs text-accent underline font-medium"
+                        >
+                          View full roadmap →
+                        </a>
+                      </div>
+                    );
+                  }
+                  // Legacy format: plain text
+                  return <p>{typeof milestones === "object" && "text" in milestones ? (milestones as any).text : String(milestones)}</p>;
+                })()}
               </Card>
             </>
           )}

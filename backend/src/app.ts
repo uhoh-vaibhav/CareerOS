@@ -12,6 +12,10 @@ import { resumeRouter } from "./modules/student/resume.routes";
 import { skillGapRouter } from "./modules/student/skillgap.routes";
 import { mentorRouter } from "./modules/student/mentor.routes";
 import { readinessRouter } from "./modules/student/readiness.routes";
+import { roadmapRouter } from "./modules/student/roadmap.routes";
+import { recruiterRouter } from "./modules/recruiter/recruiter.routes";
+import { placementRouter } from "./modules/placement/placement.routes";
+import { facultyRouter } from "./modules/faculty/faculty.routes";
 
 export function createApp() {
   const app = express();
@@ -34,8 +38,10 @@ export function createApp() {
   app.use("/api/v1/student/skill-gap", skillGapRouter);
   app.use("/api/v1/student/mentor", mentorRouter);
   app.use("/api/v1/student/readiness", readinessRouter);
-  // Additional module routers (recruiter, placement, faculty) get mounted
-  // here following the same pattern.
+  app.use("/api/v1/student/roadmap", roadmapRouter);
+  app.use("/api/v1/recruiter", recruiterRouter);
+  app.use("/api/v1/placement", placementRouter);
+  app.use("/api/v1/faculty", facultyRouter);
 
   app.use(errorHandler);
 

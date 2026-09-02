@@ -1,49 +1,76 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { registerRequest } from "@/lib/api";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState("STUDENT");
+  const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
+    setError("");
     try {
-      const { token } = await registerRequest(email, password);
-      localStorage.setItem("careeros_token", token);
-      router.push("/dashboard/student");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
-    } finally {
-      setLoading(false);
+      const res = await registerRequest(email, password, role);
+      localStorage.setItem("careeros_token", res.token);
+      
+      const userRole = res.user.role;
+      if (userRole === "STUDENT") router.push("/dashboard/student");
+      else if (userRole === "RECRUITER") router.push("/dashboard/recruiter");
+      else if (userRole === "PLACEMENT_OFFICER") router.push("/dashboard/placement");
+      else if (userRole === "FACULTY") router.push("/dashboard/faculty");
+      else if (userRole === "ADMIN") router.push("/dashboard/admin");
+      else router.push("/");
+    } catch (err: any) {
+      setError(err.message || "Registration failed");
     }
-  }
+  };
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm bg-white border border-ice rounded-xl p-6 shadow-sm space-y-4">
-        <h1 className="text-2xl font-bold text-navy">Create your CareerOS account</h1>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-          <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
-          <p className="text-xs text-gray-500 mt-1">At least 8 characters.</p>
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button type="submit" disabled={loading} className="w-full bg-navy text-white rounded-lg py-2 font-medium disabled:opacity-60">
-          {loading ? "Creating account\u2026" : "Create account"}
-        </button>
-      </form>
-    </main>
+    <div className="flex items-center justify-center min-h-screen bg-ice">
+      <div className="p-8 bg-white rounded shadow-md w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4 text-navy">Register</h1>
+        {error && <div className="text-red-500 mb-4">{error}</div>}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            className="border p-2 rounded text-black"
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            className="border p-2 rounded text-black"
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <select 
+            className="border p-2 rounded text-black"
+            value={role} 
+            onChange={(e) => setRole(e.target.value)}
+          >
+            <option value="STUDENT">Student</option>
+            <option value="RECRUITER">Recruiter</option>
+            <option value="PLACEMENT_OFFICER">Placement Officer</option>
+            <option value="FACULTY">Faculty</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+          <button className="bg-accent text-white p-2 rounded hover:bg-navy" type="submit">
+            Register
+          </button>
+        </form>
+        <p className="mt-4 text-sm text-black">
+          Already have an account? <Link href="/login" className="text-accent underline">Login here</Link>
+        </p>
+      </div>
+    </div>
   );
 }

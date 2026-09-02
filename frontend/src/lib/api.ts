@@ -55,10 +55,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function registerRequest(email: string, password: string) {
+export function registerRequest(email: string, password: string, role?: string) {
   return request<AuthResponse>("/api/v1/auth/register", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, role }),
   });
 }
 
@@ -243,4 +243,166 @@ export async function computeReadinessScoreRequest(): Promise<ReadinessScoreResu
 
   const data = (await res.json()) as { score: ReadinessScoreResult };
   return data.score;
+}
+
+/* ───────────────────── Admin API ───────────────────── */
+
+export async function getAdminStatsRequest(): Promise<{ totalUsers: number, byRole: Record<string, number>, totalResumes: number, totalJobPostings: number }> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/admin`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+export async function getAdminUsersRequest(role?: string): Promise<{ users: any[] }> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const url = role ? `${API_BASE}/api/v1/admin/users?role=${encodeURIComponent(role)}` : `${API_BASE}/api/v1/admin/users`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+export async function changeUserRoleRequest(userId: string, role: string): Promise<{ user: any }> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/admin/users/${userId}/role`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+/* ───────────────────── Recruiter API ───────────────────── */
+
+export async function createJobPostingRequest(title: string, requiredSkills: string[]): Promise<any> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/recruiter`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ title, requiredSkills }),
+  });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+export async function getRecruiterJobsRequest(): Promise<any> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/recruiter`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+export async function getJobApplicationsRequest(jobId: string): Promise<any> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/recruiter/${jobId}/applications`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+export async function updateJobStatusRequest(jobId: string, status: string): Promise<any> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/recruiter/${jobId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+/* ───────────────────── Placement API ───────────────────── */
+
+export async function getPlacementOverviewRequest(): Promise<any> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/placement`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+export async function getPlacementStudentsRequest(): Promise<any> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/placement/students`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+/* ───────────────────── Faculty API ───────────────────── */
+
+export async function getFacultyStudentsRequest(): Promise<any> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/faculty/students`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+export async function getFacultyStudentDetailRequest(profileId: string): Promise<any> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/faculty/students/${profileId}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error("Request failed");
+  return res.json();
+}
+
+/* ───────────────────── Roadmap API ───────────────────── */
+
+export interface RoadmapMilestone {
+  step: number;
+  title: string;
+  description: string;
+  skills: string[];
+  resources: string[];
+  estimatedWeeks: number;
+}
+
+export interface RoadmapResult {
+  id: string;
+  targetRole: string;
+  missingSkills: string[];
+  milestones: RoadmapMilestone[];
+  progressPct: number;
+  createdAt: string;
+}
+
+export async function getRoadmapRequest(): Promise<RoadmapResult | null> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/student/roadmap`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Request failed");
+  const data = (await res.json()) as { roadmap: RoadmapResult | null };
+  return data.roadmap;
+}
+
+export async function getRoadmapHistoryRequest(): Promise<RoadmapResult[]> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/student/roadmap/history`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Request failed");
+  const data = (await res.json()) as { roadmaps: RoadmapResult[] };
+  return data.roadmaps;
+}
+
+export async function updateRoadmapProgressRequest(roadmapId: string, progressPct: number): Promise<void> {
+  const token = localStorage.getItem("careeros_token");
+  if (!token) throw new Error("Not logged in");
+  const res = await fetch(`${API_BASE}/api/v1/student/roadmap/${roadmapId}/progress`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ progressPct }),
+  });
+  if (!res.ok) throw new Error("Request failed");
 }
