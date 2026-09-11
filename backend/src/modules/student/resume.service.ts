@@ -14,6 +14,32 @@ interface UploadedFile {
 }
 
 interface AiParseResult {
+  raw_json: {
+    ats_score: number;
+    score_label: string;
+    analysis_confidence: string;
+    candidate_profile: {
+      recruiter_first_impression: string;
+      strongest_areas: string[];
+    };
+    section_scores: Record<string, {
+      score: number;
+      max_score: number;
+      reason: string;
+    }>;
+    top_improvements: Array<{
+      priority: number;
+      issue: string;
+      why_it_matters: string;
+      recommended_action: string;
+    }>;
+    strengths: string[];
+    weaknesses: string[];
+    recruiter_verdict: {
+      shortlist_readiness: string;
+      reason: string;
+    };
+  };
   skills: string[];
   ats_score: number;
   ats_breakdown: Record<string, number>;

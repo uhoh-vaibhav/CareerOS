@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 import re
 from app.adapters.llm.factory import get_llm_provider
-from app.schemas.resume import ResumeParseRequest, ResumeParseResponse
+from app.schemas.resume import ResumeAnalysis, ResumeParseRequest, ResumeParseResponse
 
 RESUME_SYSTEM_PROMPT = (
     "You are a professional resume reviewer. Analyze the resume and provide "
@@ -103,7 +103,8 @@ ACTION_VERBS = [
 # Quantifiable metrics patterns (numbers that suggest measurable impact)
 METRICS_PATTERN = re.compile(r"\b(\d+[%+xX]|\d+\s*(?:users|requests|transactions|clients|projects|team|members|servers|endpoints|apis|hours|days|weeks|months))\b", re.IGNORECASE)
 
-
+# this function is the main entry point for parsing resumes and generating feedback
+# ----------------------------------------------------------------------------------------
 async def parse_resume(payload: ResumeParseRequest) -> ResumeParseResponse:
     llm = get_llm_provider()
 
@@ -114,8 +115,18 @@ async def parse_resume(payload: ResumeParseRequest) -> ResumeParseResponse:
     # Build a context-aware prompt for LLM feedback that includes the score breakdown
     feedback_prompt = _build_feedback_prompt(payload.resume_text, ats_score, score_breakdown)
     feedback = await llm.generate(feedback_prompt, system=RESUME_SYSTEM_PROMPT)
+    analysis = _build_structured_analysis(payload.resume_text, ats_score, score_breakdown, skills)
 
-    return ResumeParseResponse(skills=skills, ats_score=ats_score, ats_breakdown=score_breakdown, feedback=feedback)
+    return ResumeParseResponse(
+        raw_json=analysis,
+        skills=skills,
+        ats_score=ats_score,
+        ats_breakdown=score_breakdown,
+        feedback=feedback,
+    )
+
+
+# ----------------------------------------------------------------------------------------
 
 
 def extract_skills(text: str) -> list[str]:
@@ -275,6 +286,134 @@ def _build_feedback_prompt(text: str, ats_score: int, breakdown: dict[str, int])
         "focusing on the weak areas. If the score is high, acknowledge "
         "strengths and suggest minor polish."
     )
+
+
+def _build_structured_analysis(
+    text: str,
+    ats_score: int,
+    breakdown: dict[str, int],
+    skills: list[str],
+) -> ResumeAnalysis:
+    max_scores = _criterion_maxes()
+    labels = {
+        "contact_info": "Contact information",
+        "sections": "Resume sections",
+        "skills_keywords": "Skills and keywords",
+        "action_verbs": "Action verbs",
+        "quantifiable_impact": "Quantifiable impact",
+        "length_density": "Length and density",
+        "formatting": "Formatting",
+    }
+    section_scores = {
+        name: {
+            "score": score,
+            "max_score": max_scores[name],
+            "reason": _score_reason(name, score, max_scores[name]),
+        }
+        for name, score in breakdown.items()
+    }
+
+    weak_areas = [
+        name for name, score in breakdown.items()
+        if score < max_scores[name] * 0.5
+    ]
+    strong_areas = [
+        labels[name] for name, score in breakdown.items()
+        if score >= max_scores[name] * 0.8
+    ]
+    weaknesses = [labels[name] for name in weak_areas]
+    improvements = [
+        {
+            "priority": index,
+            "issue": labels[name],
+            "why_it_matters": _improvement_reason(name),
+            "recommended_action": _improvement_action(name),
+        }
+        for index, name in enumerate(weak_areas[:3], start=1)
+    ]
+
+    if ats_score >= 80:
+        score_label = "Strong"
+    elif ats_score >= 60:
+        score_label = "Needs polish"
+    else:
+        score_label = "Needs improvement"
+
+    word_count = len(text.split())
+    confidence = "High" if word_count >= 300 and len(skills) >= 3 else "Medium"
+    verdict = "Ready for review" if ats_score >= 70 else "Needs revision"
+
+    return ResumeAnalysis(
+        ats_score=ats_score,
+        score_label=score_label,
+        analysis_confidence=confidence,
+        candidate_profile={
+            "recruiter_first_impression": (
+                f"This resume demonstrates {len(skills)} detected technical skills "
+                f"with an ATS compatibility score of {ats_score}/100."
+            ),
+            "strongest_areas": strong_areas[:4],
+        },
+        section_scores=section_scores,
+        top_improvements=improvements,
+        strengths=strong_areas,
+        weaknesses=weaknesses,
+        recruiter_verdict={
+            "shortlist_readiness": verdict,
+            "reason": (
+                "The resume has a solid ATS foundation."
+                if ats_score >= 70
+                else "Address the priority improvements before submitting to recruiters."
+            ),
+        },
+    )
+
+
+def _criterion_maxes() -> dict[str, int]:
+    return {
+        "contact_info": 10,
+        "sections": 20,
+        "skills_keywords": 25,
+        "action_verbs": 10,
+        "quantifiable_impact": 10,
+        "length_density": 15,
+        "formatting": 10,
+    }
+
+
+def _score_reason(name: str, score: int, maximum: int) -> str:
+    ratio = score / maximum if maximum else 0
+    if ratio >= 0.8:
+        return "Strong coverage for this ATS criterion."
+    if ratio >= 0.5:
+        return "Partial coverage; a few targeted improvements could raise this score."
+    return f"Limited coverage; this criterion currently scores {score}/{maximum}."
+
+
+def _improvement_reason(name: str) -> str:
+    reasons = {
+        "contact_info": "Recruiters and ATS systems need reliable contact details to identify and reach the candidate.",
+        "sections": "Standard section headings help ATS systems classify resume content correctly.",
+        "skills_keywords": "Relevant keywords improve matching against job descriptions.",
+        "action_verbs": "Specific action verbs make responsibilities and contributions clearer.",
+        "quantifiable_impact": "Metrics show the scale and outcome of the candidate's work.",
+        "length_density": "Appropriate length makes the resume easier to scan without losing useful evidence.",
+        "formatting": "Consistent structure improves machine parsing and recruiter readability.",
+    }
+    return reasons[name]
+
+
+def _improvement_action(name: str) -> str:
+    actions = {
+        "contact_info": "Add a professional email, phone number, LinkedIn profile, and portfolio link where relevant.",
+        "sections": "Use clear headings such as Summary, Experience, Skills, Projects, and Education.",
+        "skills_keywords": "Add role-relevant tools and technologies that are genuinely supported by your experience.",
+        "action_verbs": "Rewrite bullets to begin with precise verbs such as built, optimized, automated, or led.",
+        "quantifiable_impact": "Add percentages, volumes, time saved, users served, or other measurable outcomes.",
+        "length_density": "Keep the resume focused on relevant evidence and remove repetitive detail.",
+        "formatting": "Use consistent bullets, dates, spacing, and simple ATS-friendly formatting.",
+    }
+    return actions[name]
 
 
 def _max_for_criterion(name: str) -> int:
