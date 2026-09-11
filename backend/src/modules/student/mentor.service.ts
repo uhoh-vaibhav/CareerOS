@@ -16,21 +16,46 @@ interface AiMentorResult {
  * exchange having happened, for the student's session history view.
  */
 export async function sendMentorMessage(userId: string, message: string) {
-  const profile = await prisma.studentProfile.findUnique({ where: { userId } });
+  const profile = await prisma.studentProfile.findUnique({ 
+    where: { userId },
+    include: {
+      skillGapReports: { orderBy: { createdAt: "desc" }, take: 1, include: { roadmap: true } },
+      readinessScores: { orderBy: { computedAt: "desc" }, take: 1 }
+    }
+  });
+  
   if (!profile) {
     throw new ApiError(404, "Student profile not found for this user");
   }
 
-  const aiResult = await callAiMentorService(profile.id, message);
+  // Construct context
+  let careerContext: any = {};
+  
+  const latestReport = profile.skillGapReports[0];
+  if (latestReport) {
+    careerContext.targetRole = latestReport.targetRole;
+    careerContext.missingSkills = latestReport.missingSkills;
+    
+    if (latestReport.roadmap) {
+      careerContext.roadmap = {
+        progressPct: latestReport.roadmap.progressPct,
+        milestones: latestReport.roadmap.milestones
+      };
+    }
+  }
+  
+  const latestScore = profile.readinessScores[0];
+  if (latestScore) {
+    careerContext.readinessScore = latestScore.compositeScore;
+  }
+
+  const aiResult = await callAiMentorService(profile.id, message, careerContext);
 
   const session = await prisma.mentorSession.create({
     data: {
       profileId: profile.id,
-      summary: `Q: ${message}\nA: ${aiResult.reply}`,
-      // The AI service keys Career Memory by profile.id under the hood;
-      // there's no separate id returned yet to store here precisely.
-      // TODO: have the AI service return the vector item id so this can
-      // point at the exact embedding instead of just the profile's collection.
+      summary: `Q: ${message}
+A: ${aiResult.reply}`,
       vectorRefId: profile.id,
     },
   });
@@ -38,12 +63,17 @@ export async function sendMentorMessage(userId: string, message: string) {
   return { session, reply: aiResult.reply, retrievedContext: aiResult.retrieved_context };
 }
 
-async function callAiMentorService(profileId: string, message: string): Promise<AiMentorResult> {
-  const res = await fetch(`${env.aiServiceUrl}/mentor/message`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ profile_id: profileId, message }),
-  });
+async function callAiMentorService(profileId: string, message: string, careerContext?: any): Promise<AiMentorResult> {
+  let res: Response;
+  try {
+    res = await fetch(`${env.aiServiceUrl}/mentor/message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile_id: profileId, message, career_context: careerContext }),
+    });
+  } catch (e) {
+    throw new ApiError(502, "The AI Mentor is temporarily unavailable (service unreachable)");
+  }
 
   if (!res.ok) {
     throw new ApiError(502, "The AI Mentor is temporarily unavailable");

@@ -14,7 +14,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: parseInt(process.env.PORT ?? "4000", 10),
   databaseUrl: required("DATABASE_URL", "postgresql://careeros:careeros@localhost:5432/careeros"),
-  jwtSecret: required("JWT_SECRET", "dev-secret-change-me"),
+  jwtSecret: required("JWT_SECRET", process.env.NODE_ENV === "production" ? undefined : "dev-secret-change-me"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
   aiServiceUrl: process.env.AI_SERVICE_URL ?? "http://localhost:8000",

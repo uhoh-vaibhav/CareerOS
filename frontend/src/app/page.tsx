@@ -4,7 +4,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center gap-6 text-center px-6">
       <h1 className="text-5xl font-bold text-navy">CareerOS</h1>
-      <p className="text-gray-600 max-w-md">
+      <p className="text-text-muted max-w-md">
         An AI-powered career intelligence platform — resume analysis, skill-gap
         roadmaps, an AI mentor, and mock interviews in one place.
       </p>

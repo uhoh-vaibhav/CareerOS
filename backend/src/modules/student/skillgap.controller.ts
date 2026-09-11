@@ -20,8 +20,8 @@ export async function analyze(req: Request, res: Response, next: NextFunction) {
 export async function list(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.user!.sub;
-    const reports = await listSkillGapReports(userId);
-    res.status(200).json({ reports });
+    const result = await listSkillGapReports(userId);
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }

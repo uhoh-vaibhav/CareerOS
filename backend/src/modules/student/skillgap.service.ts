@@ -5,6 +5,7 @@ import { ApiError } from "../../middleware/errorHandler";
 interface AiSkillGapResult {
   missing_skills: string[];
   roadmap: string;
+  raw_json?: Record<string, any>;
 }
 
 /**
@@ -48,8 +49,9 @@ export async function analyzeSkillGap(userId: string, targetRole: string) {
   const report = await prisma.skillGapReport.create({
     data: {
       profileId: profile.id,
+      resumeId: latestResume.id,
       targetRole,
-      missingSkills: aiResult.missing_skills,
+      missingSkills: aiResult.raw_json || aiResult.missing_skills,
       roadmap: {
         create: {
           milestones: milestones as any,
@@ -68,11 +70,16 @@ async function callAiSkillGapService(
   currentSkills: string[],
   targetRole: string
 ): Promise<AiSkillGapResult> {
-  const res = await fetch(`${env.aiServiceUrl}/skill-gap/analyze`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ profile_id: profileId, current_skills: currentSkills, target_role: targetRole }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${env.aiServiceUrl}/skill-gap/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile_id: profileId, current_skills: currentSkills, target_role: targetRole }),
+    });
+  } catch (e) {
+    throw new ApiError(502, "The AI service is temporarily unavailable");
+  }
 
   if (!res.ok) {
     throw new ApiError(502, "The AI service failed to analyze the skill gap");
@@ -89,5 +96,5 @@ export async function listSkillGapReports(userId: string) {
   if (!profile) {
     throw new ApiError(404, "Student profile not found for this user");
   }
-  return profile.skillGapReports;
+  return { reports: profile.skillGapReports, currentSkills: (profile.skills as string[]) || [] };
 }

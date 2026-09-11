@@ -1,6 +1,7 @@
+from fastapi import HTTPException
 import re
 from app.adapters.llm.factory import get_llm_provider
-from app.schemas.dto import ResumeParseRequest, ResumeParseResponse
+from app.schemas.resume import ResumeParseRequest, ResumeParseResponse
 
 RESUME_SYSTEM_PROMPT = (
     "You are a professional resume reviewer. Analyze the resume and provide "

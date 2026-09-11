@@ -34,7 +34,7 @@ class GeminiProvider(LLMProvider):
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.7,
-                "maxOutputTokens": 2048,
+                "maxOutputTokens": 4096,
             },
         }
 
@@ -45,7 +45,7 @@ class GeminiProvider(LLMProvider):
             }
 
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
+            async with httpx.AsyncClient(timeout=90) as client:
                 resp = await client.post(url, json=body)
                 resp.raise_for_status()
                 data = resp.json()

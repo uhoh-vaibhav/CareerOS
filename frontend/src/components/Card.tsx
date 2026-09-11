@@ -1,22 +1,22 @@
-export function Card({
-  title,
-  children,
-  tone = "blue",
-}: {
-  title: string;
-  children: React.ReactNode;
-  tone?: "blue" | "green" | "gold";
-}) {
-  const toneClasses: Record<string, string> = {
-    blue: "bg-ice border-navy/20",
-    green: "bg-green-50 border-green-700/20",
-    gold: "bg-amber-50 border-amber-600/20",
-  };
+import { ReactNode } from "react";
 
+interface CardProps {
+  title?: string;
+  children: ReactNode;
+  tone?: "blue" | "gold" | "green" | "red" | "neutral";
+  className?: string;
+}
+
+export function Card({ title, children, tone = "neutral", className = "" }: CardProps) {
+  // We remove the harsh colored borders and use subtle modern styling
   return (
-    <div className={`rounded-xl border p-4 ${toneClasses[tone]}`}>
-      <h3 className="font-semibold text-navy mb-1">{title}</h3>
-      <div className="text-sm text-gray-700">{children}</div>
+    <div className={`card-container ${className}`}>
+      {title && (
+        <h3 className="text-lg font-semibold text-navy mb-4 border-b border-border pb-3">
+          {title}
+        </h3>
+      )}
+      <div>{children}</div>
     </div>
   );
 }

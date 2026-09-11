@@ -16,6 +16,9 @@ dist/
 # Prisma
 backend/prisma/migrations/dev.db
 
+backend/uploads/resumes
+backend/uploads/certificates
+
 # Vector store local persistence
 ai-service/.chroma/
 

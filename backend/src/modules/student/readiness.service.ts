@@ -56,8 +56,11 @@ export async function computeReadinessScore(userId: string) {
   const latestReport = profile.skillGapReports[0];
   let skillGap = 0;
   if (latestReport) {
-    const missing = Array.isArray(latestReport.missingSkills)
-      ? (latestReport.missingSkills as string[])
+    const rawMissing = latestReport.missingSkills as any;
+    const missing = Array.isArray(rawMissing)
+      ? rawMissing
+      : Array.isArray(rawMissing?.missingSkills)
+      ? rawMissing.missingSkills
       : [];
     skillGap = Math.max(0, Math.min(100, 100 - missing.length * 10));
   }
@@ -76,11 +79,14 @@ export async function computeReadinessScore(userId: string) {
 
   const breakdown: Breakdown = { ats, skillGap, interview, portfolio };
 
-  const compositeScore = Math.round(
-    breakdown.ats * WEIGHTS.ats +
-      breakdown.skillGap * WEIGHTS.skillGap +
-      breakdown.interview * WEIGHTS.interview +
-      breakdown.portfolio * WEIGHTS.portfolio
+  const compositeScore = Math.min(
+    100,
+    Math.round(
+      breakdown.ats * WEIGHTS.ats +
+        breakdown.skillGap * WEIGHTS.skillGap +
+        breakdown.interview * WEIGHTS.interview +
+        breakdown.portfolio * WEIGHTS.portfolio
+    )
   );
 
   // Persist the computed score so we can show history/trends.
@@ -143,12 +149,9 @@ export async function getReadinessHistory(userId: string) {
   return history;
 }
 
-/**
- * Placeholder for extracting a 0-100 score from GitHubPortfolio.analysisJson.
- * Will be implemented properly when the Portfolio feature is built.
- */
-function extractPortfolioScore(_analysisJson: unknown): number {
-  // TODO: Parse analysisJson and derive a meaningful score
-  // (e.g. repo count, language diversity, commit frequency, stars).
+function extractPortfolioScore(analysisJson: any): number {
+  if (analysisJson && typeof analysisJson === 'object' && typeof analysisJson.score === 'number') {
+    return analysisJson.score;
+  }
   return 0;
 }

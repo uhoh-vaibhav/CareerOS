@@ -1,0 +1,845 @@
+I want you to refactor and clean the structure of my existing CareerOS project.
+
+IMPORTANT:
+
+The project is already working.
+
+Do NOT rebuild the project from scratch.
+
+Do NOT remove working functionality.
+
+Do NOT blindly rename files.
+
+The current problem is that there are many temporary patch/fix files such as:
+
+* append_routers.py
+* fix_ai_roadmap.py
+* fix_mentor_ai.py
+* fix_mentor_dto.py
+* fix_mentor_indent.py
+* fix_prompt_newlines.py
+* fix_resume_dto.py
+* fix_resume_service.py
+* fix_skillgap_ai.py
+* fix_skillgap_dto.py
+* fix_skillgap_newlines.py
+* fix_study_ai.py
+* fix_study_dto.py
+* update_dto.py
+
+Some of these files contain newer fixes or functionality that may overlap with existing source files.
+
+I want these temporary files properly consolidated into a clean production-ready structure.
+
+---
+
+# PRIMARY GOAL
+
+Transform the project from a patch-based development structure into a proper maintainable architecture.
+
+Files should NOT permanently contain names such as:
+
+fix_
+new_
+updated_
+final_
+final2_
+working_
+temp_
+backup_
+
+These changes belong in Git history, not permanent source filenames.
+
+---
+
+# VERY IMPORTANT SAFETY RULE
+
+Before deleting or renaming ANY `fix_*`, `update_*`, or patch file:
+
+1. Read its complete content.
+2. Find the original/canonical file it was intended to modify.
+3. Compare both implementations.
+4. Identify what functionality exists only in the patch file.
+5. Merge the required changes into the canonical implementation.
+6. Update imports.
+7. Verify there are no duplicate implementations.
+8. Verify the feature still works.
+9. Only then delete the patch file.
+
+DO NOT simply delete patch files because they look temporary.
+
+DO NOT simply rename `fix_ai_roadmap.py` to `roadmap.py`.
+
+The patch may only contain a partial modification.
+
+---
+
+# DESIRED AI-SERVICE STRUCTURE
+
+Organize the Python/FastAPI AI service approximately like this:
+
+ai-service/
+│
+├── app/
+│   ├── main.py
+│   │
+│   ├── api/
+│   │   ├── **init**.py
+│   │   ├── router.py
+│   │   ├── resume.py
+│   │   ├── skill_gap.py
+│   │   ├── roadmap.py
+│   │   ├── mentor.py
+│   │   └── study.py
+│   │
+│   ├── services/
+│   │   ├── **init**.py
+│   │   ├── resume_service.py
+│   │   ├── skill_gap_service.py
+│   │   ├── roadmap_service.py
+│   │   ├── mentor_service.py
+│   │   └── study_service.py
+│   │
+│   ├── schemas/
+│   │   ├── **init**.py
+│   │   ├── resume.py
+│   │   ├── skill_gap.py
+│   │   ├── roadmap.py
+│   │   ├── mentor.py
+│   │   └── study.py
+│   │
+│   ├── prompts/
+│   │   ├── **init**.py
+│   │   ├── resume_prompt.py
+│   │   ├── skill_gap_prompt.py
+│   │   ├── roadmap_prompt.py
+│   │   ├── mentor_prompt.py
+│   │   └── study_prompt.py
+│   │
+│   ├── core/
+│   │   ├── **init**.py
+│   │   ├── config.py
+│   │   └── llm.py
+│   │
+│   └── utils/
+│       ├── **init**.py
+│       └── ...
+│
+├── tests/
+│
+├── requirements.txt
+├── Dockerfile
+└── .env
+
+Adapt this structure to the existing project instead of forcing it blindly.
+
+If the project already has a good equivalent structure, reuse it.
+
+---
+
+# RESPONSIBILITY OF EACH DIRECTORY
+
+## api/
+
+Contains only HTTP/FastAPI route handling.
+
+Examples:
+
+* parse request
+* validate request
+* call service
+* return response
+
+Do NOT put huge prompts or business logic directly inside route files.
+
+---
+
+## services/
+
+Contains application/AI logic.
+
+Examples:
+
+resume_service.py
+
+skill_gap_service.py
+
+roadmap_service.py
+
+mentor_service.py
+
+study_service.py
+
+These files should:
+
+* prepare service-specific data
+* call LLM where required
+* parse model output
+* handle service logic
+
+---
+
+## schemas/
+
+Contains Pydantic request/response models.
+
+Do NOT maintain separate files such as:
+
+fix_resume_dto.py
+fix_skillgap_dto.py
+fix_study_dto.py
+
+Merge these into canonical schema files.
+
+Example:
+
+schemas/resume.py
+
+schemas/skill_gap.py
+
+schemas/roadmap.py
+
+schemas/mentor.py
+
+schemas/study.py
+
+---
+
+## prompts/
+
+Move large LLM prompts out of route/service files where practical.
+
+Examples:
+
+resume_prompt.py
+skill_gap_prompt.py
+roadmap_prompt.py
+mentor_prompt.py
+study_prompt.py
+
+This should make CareerOS prompts much easier to maintain.
+
+---
+
+## core/
+
+Contains shared infrastructure.
+
+Examples:
+
+config.py
+LLM client
+environment configuration
+shared model/provider initialization
+
+Do not create separate LLM clients in every feature unless genuinely required.
+
+---
+
+# CONSOLIDATE EXISTING PATCH FILES
+
+Inspect the current patch files and merge them appropriately.
+
+For example:
+
+fix_ai_roadmap.py
+
+may contain changes belonging to:
+
+services/roadmap_service.py
+
+and/or
+
+prompts/roadmap_prompt.py
+
+and/or
+
+schemas/roadmap.py
+
+Do not assume one patch file maps to one final file.
+
+---
+
+fix_mentor_ai.py
+
+may contain changes for:
+
+services/mentor_service.py
+prompts/mentor_prompt.py
+
+---
+
+fix_mentor_dto.py
+
+should likely merge into:
+
+schemas/mentor.py
+
+---
+
+fix_resume_dto.py
+
+should likely merge into:
+
+schemas/resume.py
+
+---
+
+fix_resume_service.py
+
+should merge into the canonical resume service.
+
+---
+
+fix_skillgap_ai.py
+
+should likely merge into:
+
+services/skill_gap_service.py
+prompts/skill_gap_prompt.py
+
+---
+
+fix_skillgap_dto.py
+
+should merge into:
+
+schemas/skill_gap.py
+
+---
+
+fix_study_ai.py
+
+should likely merge into:
+
+services/study_service.py
+prompts/study_prompt.py
+
+---
+
+fix_study_dto.py
+
+should merge into:
+
+schemas/study.py
+
+---
+
+fix_prompt_newlines.py
+fix_skillgap_newlines.py
+fix_mentor_indent.py
+
+These look like temporary scripts.
+
+Determine exactly what files they modify.
+
+Apply the corrected content directly to the actual source files.
+
+Then remove the temporary scripts.
+
+---
+
+# ROUTER CLEANUP
+
+The project currently has a file such as:
+
+append_routers.py
+
+Do not keep a script whose purpose is to modify the router source.
+
+Create or use a proper router aggregator.
+
+Example:
+
+app/api/router.py
+
+from fastapi import APIRouter
+
+from app.api.resume import router as resume_router
+from app.api.skill_gap import router as skill_gap_router
+from app.api.roadmap import router as roadmap_router
+from app.api.mentor import router as mentor_router
+from app.api.study import router as study_router
+
+api_router = APIRouter()
+
+api_router.include_router(resume_router, prefix="/resume", tags=["Resume"])
+api_router.include_router(skill_gap_router, prefix="/skill-gap", tags=["Skill Gap"])
+api_router.include_router(roadmap_router, prefix="/roadmap", tags=["Roadmap"])
+api_router.include_router(mentor_router, prefix="/mentor", tags=["AI Mentor"])
+api_router.include_router(study_router, prefix="/study", tags=["Study"])
+
+Then keep main.py minimal.
+
+Example:
+
+from fastapi import FastAPI
+from app.api.router import api_router
+
+app = FastAPI(title="CareerOS AI Service")
+
+app.include_router(api_router, prefix="/api")
+
+Adapt prefixes to the existing API.
+
+DO NOT accidentally change existing endpoint URLs.
+
+---
+
+# PRESERVE EXISTING API CONTRACTS
+
+This is extremely important.
+
+Do not change frontend-facing endpoint paths unnecessarily.
+
+For example, if the frontend currently calls:
+
+/api/skill-gap/analyze
+
+do not suddenly change it to:
+
+/api/v2/skillgap
+
+unless absolutely required.
+
+Preserve:
+
+* request payloads
+* response structures
+* endpoint paths
+* authentication behavior
+
+unless there is a proven bug.
+
+---
+
+# PRESERVE CURRENT CAREEROS FEATURES
+
+The refactor must preserve all recently implemented functionality, including where applicable:
+
+Resume analysis
+
+ATS/readiness analysis
+
+Skill Gap Analysis
+
+role-aware matched/missing skills
+
+roadmap generation
+
+roadmap phases
+
+milestones/subtasks
+
+milestone progress
+
+roadmap completion
+
+learning resources
+
+AI-generated study material
+
+AI Career Mentor
+
+mentor context awareness
+
+target-role context
+
+skill-gap context
+
+roadmap context
+
+current phase
+
+current milestone
+
+study material generation
+
+AI-generated notes
+
+practice questions
+
+mini projects
+
+Any existing persistence functionality
+
+Do not lose newer functionality while merging older and newer files.
+
+---
+
+# DUPLICATE CODE DETECTION
+
+Search the project for duplicate implementations.
+
+Look for cases such as:
+
+two roadmap generators
+
+two skill-gap prompts
+
+multiple mentor system prompts
+
+duplicate DTO classes
+
+duplicate API routes
+
+multiple functions with nearly identical names
+
+old versions of services still imported somewhere
+
+Example:
+
+generate_roadmap()
+
+and
+
+generate_ai_roadmap()
+
+may perform the same job.
+
+Determine which implementation is current and consolidate safely.
+
+---
+
+# NAMING CONVENTIONS
+
+Use consistent snake_case Python filenames.
+
+Good:
+
+skill_gap.py
+
+skill_gap_service.py
+
+skill_gap_prompt.py
+
+roadmap_service.py
+
+mentor_service.py
+
+study_service.py
+
+Avoid:
+
+skillgapAI.py
+
+fixSkillGap.py
+
+new_roadmap_final.py
+
+updateDTO.py
+
+final_prompt2.py
+
+---
+
+# IMPORT CLEANUP
+
+After moving or merging files:
+
+Update all imports.
+
+Search the whole repository for references to:
+
+fix_
+update_
+append_routers
+old DTO modules
+old service modules
+
+There should be no stale imports.
+
+---
+
+# REMOVE DEAD CODE
+
+After consolidation:
+
+Remove code that is:
+
+* unreachable
+* unused
+* duplicated
+* obsolete
+* only needed by temporary patch scripts
+
+But do not remove something unless you confirm it is unused.
+
+---
+
+# REQUIREMENTS.TXT
+
+Inspect Python dependencies.
+
+Keep only dependencies actually required by the AI service.
+
+Do not remove dependencies blindly.
+
+Do not upgrade major package versions unnecessarily during this refactor.
+
+This task is project cleanup, not dependency modernization.
+
+---
+
+# DOCKERFILE
+
+Move/keep the Dockerfile with the service it builds.
+
+If the Dockerfile belongs to the AI service, it should preferably live inside:
+
+ai-service/Dockerfile
+
+Do not modify deployment behavior unless required because of changed paths.
+
+---
+
+# TEST AFTER EACH FEATURE
+
+Do not perform the entire refactor and test only at the end.
+
+Refactor feature-by-feature.
+
+Recommended order:
+
+1. Resume
+2. Skill Gap
+3. Roadmap
+4. Study
+5. AI Mentor
+6. Router/main cleanup
+7. shared config/LLM cleanup
+
+After each feature:
+
+* verify imports
+* verify application starts
+* verify endpoint still exists
+* verify response structure
+* verify no patch file is still required
+
+---
+
+# BACKWARD COMPATIBILITY
+
+Be especially careful with existing roadmap data.
+
+Older roadmaps may contain:
+
+steps
+
+while newer roadmaps may contain:
+
+phases
+milestones
+
+Do not break existing users' roadmap records.
+
+Preserve existing compatibility logic.
+
+Do not reset roadmap progress.
+
+---
+
+# GIT SAFETY
+
+Before making destructive changes, ensure the current working state can be recovered.
+
+Do not alter Git history.
+
+Do not use:
+
+git reset --hard
+git clean -fd
+force push
+
+Do not delete unrelated user work.
+
+Only modify files required for this refactor.
+
+---
+
+# FINAL PROJECT ROOT
+
+The project root should become clean.
+
+Instead of:
+
+CareerOS/
+
+append_routers.py
+fix_ai_roadmap.py
+fix_mentor_ai.py
+fix_mentor_dto.py
+fix_mentor_indent.py
+fix_prompt_newlines.py
+fix_resume_dto.py
+fix_resume_service.py
+fix_skillgap_ai.py
+fix_skillgap_dto.py
+fix_skillgap_newlines.py
+fix_study_ai.py
+fix_study_dto.py
+update_dto.py
+requirements.txt
+Dockerfile
+backend/
+frontend/
+
+I want something closer to:
+
+CareerOS/
+
+backend/
+ai-service/
+frontend/
+docs/
+
+README.md
+.gitignore
+docker-compose.yml
+
+Temporary source modification scripts should not remain at the root.
+
+---
+
+# DO NOT OVER-ENGINEER
+
+Do not introduce:
+
+repository pattern
+dependency injection framework
+event buses
+microservices
+CQRS
+complex abstractions
+
+unless they already exist or are clearly needed.
+
+CareerOS should remain easy for a student/developer to understand and maintain.
+
+Use clean, practical architecture.
+
+---
+
+# EXECUTION PROCESS
+
+Follow this exact process:
+
+PHASE 1 — INSPECTION
+
+First inspect the complete repository.
+
+Do not modify files immediately.
+
+Identify:
+
+* actual project structure
+* canonical files
+* temporary files
+* duplicate implementations
+* imports
+* routers
+* services
+* schemas
+* prompts
+* LLM client usage
+
+Then create an internal migration plan.
+
+---
+
+PHASE 2 — CONSOLIDATION
+
+For each feature:
+
+Compare original and patch versions.
+
+Merge the newest valid functionality.
+
+Move code into the appropriate canonical module.
+
+Update imports.
+
+---
+
+PHASE 3 — VALIDATION
+
+Run:
+
+Python syntax checks
+
+application import/startup
+
+available automated tests if present
+
+Check for broken imports.
+
+Verify FastAPI router registration.
+
+---
+
+PHASE 4 — CLEANUP
+
+Only after validation:
+
+delete temporary fix/update scripts
+
+remove dead imports
+
+remove duplicate implementations
+
+---
+
+PHASE 5 — FINAL VERIFICATION
+
+Search the repository for:
+
+fix_
+update_dto
+append_routers
+
+There should be no references remaining unless a genuinely unrelated filename intentionally contains that term.
+
+Run the AI service again.
+
+Verify application startup.
+
+---
+
+# FINAL REPORT
+
+After completing the refactor, provide:
+
+1. Final directory tree
+
+2. Files moved
+
+3. Files renamed
+
+4. Files merged
+
+5. Files deleted
+
+6. Duplicate implementations found
+
+7. Which version was retained and why
+
+8. Import changes
+
+9. Router changes
+
+10. Schema/DTO consolidation
+
+11. Prompt consolidation
+
+12. Service consolidation
+
+13. Tests/checks performed
+
+14. Any API compatibility issues discovered
+
+15. Any file you intentionally did NOT remove and why
+
+Most importantly:
+
+Do not say the cleanup is complete unless the application imports/starts successfully after the refactor.

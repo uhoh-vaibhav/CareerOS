@@ -30,13 +30,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-ice">
-      <div className="p-8 bg-white rounded shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4 text-navy">Login</h1>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="p-8 bg-surface border border-border rounded-xl shadow-card w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4 text-text-main">Welcome back</h1>
+        {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
-            className="border p-2 rounded text-black"
+            className="input-field text-text-main"
             type="email"
             placeholder="Email"
             value={email}
@@ -44,19 +44,19 @@ export default function LoginPage() {
             required
           />
           <input
-            className="border p-2 rounded text-black"
+            className="input-field text-text-main"
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <button className="bg-accent text-white p-2 rounded hover:bg-navy" type="submit">
-            Login
+          <button className="btn-primary mt-2" type="submit">
+            Log in
           </button>
         </form>
-        <p className="mt-4 text-sm text-black">
-          Don't have an account? <Link href="/register" className="text-accent underline">Register here</Link>
+        <p className="mt-6 text-sm text-text-muted text-center">
+          Don't have an account? <Link href="/register" className="text-accent font-medium hover:underline">Sign up here</Link>
         </p>
       </div>
     </div>

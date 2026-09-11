@@ -1,6 +1,7 @@
+from fastapi import HTTPException
 from app.adapters.llm.factory import get_llm_provider
 from app.adapters.vector.factory import get_vector_store
-from app.schemas.dto import MentorMessageRequest, MentorMessageResponse
+from app.schemas.mentor import MentorMessageRequest, MentorMessageResponse
 
 MENTOR_SYSTEM_PROMPT = (
     "You are CareerOS's AI Career Mentor. Use the retrieved context about "

@@ -1,5 +1,7 @@
+from fastapi import HTTPException
 from app.adapters.llm.factory import get_llm_provider
-from app.schemas.dto import SkillGapRequest, SkillGapResponse
+from app.schemas.skill_gap import SkillGapRequest, SkillGapResponse
+from app.schemas.study import StudyMaterialRequest, StudyMaterialResponse
 
 # Minimal seed of role -> required skills. Replace with a real role-skills
 # table (see Design Document 3.1 notes on JSON columns for AI-derived content).
@@ -295,70 +297,6 @@ RESOURCE_SUGGESTIONS: dict[str, list[str]] = {
 }
 
 
-def _classify_skill(skill: str) -> str:
-    """Return the domain name a skill belongs to."""
-    lowered = skill.lower()
-    for domain, skills_list in SKILL_DOMAINS.items():
-        if lowered in skills_list:
-            return domain
-    return "domain"  # default: domain-specific
-
-
-def _generate_mock_roadmap(target_role: str, missing: list[str]) -> list[dict]:
-    """
-    Generate a curriculum-style roadmap by classifying each missing skill
-    into a learning domain, then grouping related skills into sequenced
-    learning phases ordered from foundational → advanced.
-    """
-    # 1. Classify each skill into its domain
-    domain_skills: dict[str, list[str]] = {}
-    for skill in missing:
-        domain = _classify_skill(skill)
-        domain_skills.setdefault(domain, []).append(skill)
-
-    # 2. Build phases in tier order (foundations → domain-specific)
-    tier_order = [
-        "foundations", "languages", "frameworks", "data_ml",
-        "infrastructure", "practices", "domain",
-    ]
-
-    phases: list[dict] = []
-    step = 1
-
-    for domain in tier_order:
-        skills = domain_skills.get(domain)
-        if not skills:
-            continue
-
-        # If a domain has many skills, split into sub-phases of 2-4
-        chunks = [skills[i:i + 4] for i in range(0, len(skills), 4)]
-        for chunk_idx, chunk in enumerate(chunks):
-            title = PHASE_TITLES.get(domain, "Specialized Skills")
-            if len(chunks) > 1:
-                title += f" (Part {chunk_idx + 1})"
-
-            # Estimate weeks: 1 week per skill, min 1, max 4
-            weeks = max(1, min(len(chunk) + 1, 4))
-
-            phases.append({
-                "step": step,
-                "title": title,
-                "description": PHASE_DESCRIPTIONS.get(domain, (
-                    f"Learn {', '.join(chunk)} to strengthen your "
-                    f"qualification for the {target_role} role."
-                )),
-                "skills": chunk,
-                "resources": RESOURCE_SUGGESTIONS.get(domain, [
-                    f"Official {chunk[0].title()} documentation",
-                    f"Udemy / Coursera courses on {chunk[0]}",
-                ])[:3],
-                "estimatedWeeks": weeks,
-            })
-            step += 1
-
-    # 3. Cap at 6 phases max
-    return phases[:6]
-
 
 async def analyze_skill_gap(payload: SkillGapRequest) -> SkillGapResponse:
     # Step: fetch required-skill profile for target role
@@ -368,21 +306,22 @@ async def analyze_skill_gap(payload: SkillGapRequest) -> SkillGapResponse:
     # Step: compute set difference (required - possessed)
     missing = [skill for skill in required if skill not in possessed]
 
-    # Step: any gaps found? -> generate roadmap, else mark "skills matched"
     llm = get_llm_provider()
     if missing:
         prompt = (
             f"Target role: {payload.target_role}\n"
             f"Missing skills: {', '.join(missing)}"
         )
-        raw = await llm.generate(prompt, system=ROADMAP_SYSTEM_PROMPT)
-
-        # Try to parse structured JSON from the LLM response.
-        # If it's a mock or the LLM returns non-JSON, fall back to
-        # a deterministic structured roadmap.
+        
+        try:
+            raw = await llm.generate(prompt, system=ROADMAP_SYSTEM_PROMPT)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"LLM generation failed: {e}")
+            raise HTTPException(status_code=502, detail="AI analysis is temporarily unavailable.")
+        
         import json
         try:
-            # Strip markdown code fences if present
             cleaned = raw.strip()
             if cleaned.startswith("```"):
                 cleaned = cleaned.split("\n", 1)[1]
@@ -391,13 +330,40 @@ async def analyze_skill_gap(payload: SkillGapRequest) -> SkillGapResponse:
             if not isinstance(milestones, list):
                 raise ValueError("Not a list")
             roadmap = json.dumps(milestones)
-        except (json.JSONDecodeError, ValueError):
-            # LLM didn't return valid JSON — use structured mock
-            milestones = _generate_mock_roadmap(payload.target_role, missing)
-            roadmap = json.dumps(milestones)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to parse roadmap: {e}")
+            raise HTTPException(status_code=502, detail="AI analysis is temporarily unavailable.")
     else:
         roadmap = "[]"
 
     return SkillGapResponse(missing_skills=missing, roadmap=roadmap)
 
-
+async def generate_study_material(payload: StudyMaterialRequest) -> StudyMaterialResponse:
+    from app.schemas.study import StudyMaterialResponse
+    from app.prompts.skill_gap_prompt import STUDY_MATERIAL_PROMPT
+    from app.adapters.llm.factory import get_llm_provider
+    import json
+    from fastapi import HTTPException
+    
+    llm = get_llm_provider()
+    
+    prompt = f"Role: {payload.target_role}\nPhase: {payload.phase}\nMilestone: {payload.milestone}\nSkills: {', '.join(payload.skills)}\nObjectives: {', '.join(payload.objectives)}\n\nGenerate strict JSON."
+    
+    try:
+        raw = await llm.generate(prompt, system=STUDY_MATERIAL_PROMPT)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"LLM generation failed: {e}")
+        raise HTTPException(status_code=502, detail="AI analysis is temporarily unavailable.")
+        
+    try:
+        cleaned = raw.strip()
+        if "`json" in cleaned:
+            cleaned = cleaned.split("`json")[1].split("`")[0].strip()
+        elif "`" in cleaned:
+            cleaned = cleaned.split("`")[1].split("`")[0].strip()
+        data = json.loads(cleaned)
+        return StudyMaterialResponse(**data)
+    except Exception:
+        raise HTTPException(status_code=502, detail="Failed to parse AI output.")

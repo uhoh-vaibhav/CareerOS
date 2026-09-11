@@ -6,6 +6,7 @@ import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("STUDENT");
@@ -15,7 +16,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
     try {
-      const res = await registerRequest(email, password, role);
+      const res = await registerRequest(name, email, password, role);
       localStorage.setItem("careeros_token", res.token);
       
       const userRole = res.user.role;
@@ -31,13 +32,21 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-ice">
-      <div className="p-8 bg-white rounded shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4 text-navy">Register</h1>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="p-8 bg-surface border border-border rounded-xl shadow-card w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4 text-text-main">Create your account</h1>
+        {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
-            className="border p-2 rounded text-black"
+            className="input-field text-text-main"
+            type="text"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <input
+            className="input-field text-text-main"
             type="email"
             placeholder="Email"
             value={email}
@@ -45,7 +54,7 @@ export default function RegisterPage() {
             required
           />
           <input
-            className="border p-2 rounded text-black"
+            className="input-field text-text-main"
             type="password"
             placeholder="Password"
             value={password}
@@ -53,7 +62,7 @@ export default function RegisterPage() {
             required
           />
           <select 
-            className="border p-2 rounded text-black"
+            className="input-field text-text-main cursor-pointer"
             value={role} 
             onChange={(e) => setRole(e.target.value)}
           >
@@ -63,12 +72,12 @@ export default function RegisterPage() {
             <option value="FACULTY">Faculty</option>
             <option value="ADMIN">Admin</option>
           </select>
-          <button className="bg-accent text-white p-2 rounded hover:bg-navy" type="submit">
+          <button className="btn-primary mt-2" type="submit">
             Register
           </button>
         </form>
-        <p className="mt-4 text-sm text-black">
-          Already have an account? <Link href="/login" className="text-accent underline">Login here</Link>
+        <p className="mt-6 text-sm text-text-muted text-center">
+          Already have an account? <Link href="/login" className="text-accent font-medium hover:underline">Log in</Link>
         </p>
       </div>
     </div>
