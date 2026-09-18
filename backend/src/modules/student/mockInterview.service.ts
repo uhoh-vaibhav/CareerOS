@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { ApiError } from "../../middleware/errorHandler";
+import { computeReadinessScore } from "./readiness.service";
 
 interface QuestionAnswer {
   question: string;
@@ -69,6 +70,9 @@ export async function evaluateMockInterview(userId: string, targetRole: string, 
       score: aiResult.score,
     },
   });
+
+  // Automatically refresh career readiness score
+  await computeReadinessScore(userId).catch(() => {});
 
   return interview;
 }

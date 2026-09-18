@@ -10,6 +10,7 @@ export async function getLatestRoadmap(userId: string) {
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
     include: {
+      resumes: { orderBy: { createdAt: "desc" }, take: 1 },
       skillGapReports: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -27,6 +28,18 @@ export async function getLatestRoadmap(userId: string) {
     return null;
   }
 
+  const latestResume = profile.resumes[0];
+  let isStale = false;
+  let staleReason: string | null = null;
+
+  if (latestResume && latestReport.resumeId && latestReport.resumeId !== latestResume.id) {
+    isStale = true;
+    staleReason = "A newer resume has been uploaded since this roadmap was generated.";
+  } else if (profile.targetRole && latestReport.targetRole.toLowerCase() !== profile.targetRole.toLowerCase()) {
+    isStale = true;
+    staleReason = `Your target role was updated to "${profile.targetRole}".`;
+  }
+
   return {
     id: latestReport.roadmap.id,
     targetRole: latestReport.targetRole,
@@ -34,6 +47,8 @@ export async function getLatestRoadmap(userId: string) {
     milestones: latestReport.roadmap.milestones,
     progressPct: latestReport.roadmap.progressPct,
     createdAt: latestReport.createdAt,
+    isStale,
+    staleReason,
   };
 }
 
@@ -138,10 +153,21 @@ export async function generateStudyMaterial(
   }
 
   const milestones: any = Array.isArray(roadmap.milestones) ? roadmap.milestones : [];
-  const phase = milestones[phaseIdx];
-  if (!phase || !Array.isArray(phase.subtasks)) throw new ApiError(400, "Invalid phase or subtasks not found");
-  const subtask = phase.subtasks[subtaskIdx];
-  if (!subtask) throw new ApiError(400, "Invalid subtask index");
+  let phaseTitle = "Learning Phase";
+  let subtask: any = null;
+
+  if (milestones[phaseIdx]) {
+    const phase = milestones[phaseIdx];
+    if (phase && Array.isArray(phase.subtasks)) {
+      phaseTitle = phase.title || `Phase ${phaseIdx + 1}`;
+      subtask = phase.subtasks[subtaskIdx];
+    } else {
+      phaseTitle = phase.title || `Phase ${phaseIdx + 1}`;
+      subtask = phase;
+    }
+  }
+
+  if (!subtask) throw new ApiError(400, "Milestone not found for the specified index");
 
   // Check cache
   if (subtask.generatedMaterial && !forceRegenerate) {
@@ -156,8 +182,8 @@ export async function generateStudyMaterial(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         target_role: roadmap.report.targetRole,
-        phase_title: phase.title,
-        milestone_title: subtask.title,
+        phase_title: phaseTitle,
+        milestone_title: subtask.title || subtask.name || "Core Concept",
         milestone_description: subtask.description || "",
         skills: subtask.skills || []
       })

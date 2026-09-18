@@ -52,6 +52,8 @@ export interface SkillGapResult {
     roadmap: { milestones: { text: string }; progressPct: number } | null;
   };
   currentSkills: string[];
+  isStale?: boolean;
+  staleReason?: string | null;
 }
 
 export interface MentorSendResult {
@@ -69,6 +71,7 @@ export interface MentorSession {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
@@ -98,17 +101,15 @@ export function loginRequest(email: string, password: string) {
 }
 
 export async function uploadResumeRequest(file: File): Promise<ResumeParseResult> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) {
-    throw new Error("Not logged in");
-  }
+  
+  
 
   const formData = new FormData();
   formData.append("resume", file);
 
   const res = await fetch(`${API_BASE}/api/v1/student/resume`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
     body: formData,
     // NOTE: do NOT set Content-Type manually here — the browser needs to set
     // it itself (including the multipart boundary) for FormData uploads.
@@ -123,17 +124,12 @@ export async function uploadResumeRequest(file: File): Promise<ResumeParseResult
 }
 
 export async function analyzeSkillGapRequest(targetRole: string): Promise<SkillGapResult> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) {
-    throw new Error("Not logged in");
-  }
+  
+  
 
   const res = await fetch(`${API_BASE}/api/v1/student/skill-gap`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ target_role: targetRole }),
   });
 
@@ -146,17 +142,12 @@ export async function analyzeSkillGapRequest(targetRole: string): Promise<SkillG
 }
 
 export async function sendMentorMessageRequest(message: string): Promise<MentorSendResult> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) {
-    throw new Error("Not logged in");
-  }
+  
+  
 
   const res = await fetch(`${API_BASE}/api/v1/student/mentor`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ message }),
   });
 
@@ -169,13 +160,11 @@ export async function sendMentorMessageRequest(message: string): Promise<MentorS
 }
 
 export async function getMentorHistoryRequest(): Promise<MentorSession[]> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) {
-    throw new Error("Not logged in");
-  }
+  
+  
 
   const res = await fetch(`${API_BASE}/api/v1/student/mentor`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -197,13 +186,11 @@ export interface SkillGapReportSummary {
 }
 
 export async function getSkillGapReportsRequest(): Promise<SkillGapReportSummary[]> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) {
-    throw new Error("Not logged in");
-  }
+  
+  
 
   const res = await fetch(`${API_BASE}/api/v1/student/skill-gap`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -232,13 +219,11 @@ export interface ReadinessScoreResult {
 }
 
 export async function getReadinessScoreRequest(): Promise<ReadinessScoreResult | null> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) {
-    throw new Error("Not logged in");
-  }
+  
+  
 
   const res = await fetch(`${API_BASE}/api/v1/student/readiness`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -251,17 +236,12 @@ export async function getReadinessScoreRequest(): Promise<ReadinessScoreResult |
 }
 
 export async function computeReadinessScoreRequest(): Promise<ReadinessScoreResult> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) {
-    throw new Error("Not logged in");
-  }
+  
+  
 
   const res = await fetch(`${API_BASE}/api/v1/student/readiness`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
   });
 
   if (!res.ok) {
@@ -276,28 +256,22 @@ export async function computeReadinessScoreRequest(): Promise<ReadinessScoreResu
 /* ───────────────────── Admin API ───────────────────── */
 
 export async function getAdminStatsRequest(): Promise<{ totalUsers: number, byRole: Record<string, number>, totalResumes: number, totalJobPostings: number }> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
-  const res = await fetch(`${API_BASE}/api/v1/admin`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${API_BASE}/api/v1/admin`, { credentials: "include" });
   if (!res.ok) throw new Error("Request failed");
   return res.json();
 }
 
 export async function getAdminUsersRequest(role?: string): Promise<{ users: any[] }> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const url = role ? `${API_BASE}/api/v1/admin/users?role=${encodeURIComponent(role)}` : `${API_BASE}/api/v1/admin/users`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(url, { credentials: "include" });
   if (!res.ok) throw new Error("Request failed");
   return res.json();
 }
 
 export async function changeUserRoleRequest(userId: string, role: string): Promise<{ user: any }> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/admin/users/${userId}/role`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ role }),
   });
   if (!res.ok) throw new Error("Request failed");
@@ -307,11 +281,9 @@ export async function changeUserRoleRequest(userId: string, role: string): Promi
 /* ───────────────────── Recruiter API ───────────────────── */
 
 export async function createJobPostingRequest(title: string, requiredSkills: string[]): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/recruiter`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ title, requiredSkills }),
   });
   if (!res.ok) throw new Error("Request failed");
@@ -319,27 +291,21 @@ export async function createJobPostingRequest(title: string, requiredSkills: str
 }
 
 export async function getRecruiterJobsRequest(): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
-  const res = await fetch(`${API_BASE}/api/v1/recruiter`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${API_BASE}/api/v1/recruiter`, { credentials: "include" });
   if (!res.ok) throw new Error("Request failed");
   return res.json();
 }
 
 export async function getJobApplicationsRequest(jobId: string): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
-  const res = await fetch(`${API_BASE}/api/v1/recruiter/${jobId}/applications`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${API_BASE}/api/v1/recruiter/${jobId}/applications`, { credentials: "include" });
   if (!res.ok) throw new Error("Request failed");
   return res.json();
 }
 
 export async function updateJobStatusRequest(jobId: string, status: string): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/recruiter/${jobId}/status`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error("Request failed");
@@ -349,17 +315,13 @@ export async function updateJobStatusRequest(jobId: string, status: string): Pro
 /* ───────────────────── Placement API ───────────────────── */
 
 export async function getPlacementOverviewRequest(): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
-  const res = await fetch(`${API_BASE}/api/v1/placement`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${API_BASE}/api/v1/placement`, { credentials: "include" });
   if (!res.ok) throw new Error("Request failed");
   return res.json();
 }
 
 export async function getPlacementStudentsRequest(): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
-  const res = await fetch(`${API_BASE}/api/v1/placement/students`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${API_BASE}/api/v1/placement/students`, { credentials: "include" });
   if (!res.ok) throw new Error("Request failed");
   return res.json();
 }
@@ -367,17 +329,13 @@ export async function getPlacementStudentsRequest(): Promise<any> {
 /* ───────────────────── Faculty API ───────────────────── */
 
 export async function getFacultyStudentsRequest(): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
-  const res = await fetch(`${API_BASE}/api/v1/faculty/students`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${API_BASE}/api/v1/faculty/students`, { credentials: "include" });
   if (!res.ok) throw new Error("Request failed");
   return res.json();
 }
 
 export async function getFacultyStudentDetailRequest(profileId: string): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
-  const res = await fetch(`${API_BASE}/api/v1/faculty/students/${profileId}`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${API_BASE}/api/v1/faculty/students/${profileId}`, { credentials: "include" });
   if (!res.ok) throw new Error("Request failed");
   return res.json();
 }
@@ -410,13 +368,13 @@ export interface RoadmapResult {
   milestones: RoadmapMilestone[];
   progressPct: number;
   createdAt: string;
+  isStale?: boolean;
+  staleReason?: string | null;
 }
 
 export async function getRoadmapRequest(): Promise<RoadmapResult | null> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/student/roadmap`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) throw new Error("Request failed");
   const data = (await res.json()) as { roadmap: RoadmapResult | null };
@@ -424,10 +382,8 @@ export async function getRoadmapRequest(): Promise<RoadmapResult | null> {
 }
 
 export async function getRoadmapHistoryRequest(): Promise<RoadmapResult[]> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/student/roadmap/history`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) throw new Error("Request failed");
   const data = (await res.json()) as { roadmaps: RoadmapResult[] };
@@ -435,11 +391,9 @@ export async function getRoadmapHistoryRequest(): Promise<RoadmapResult[]> {
 }
 
 export async function updateRoadmapProgressRequest(roadmapId: string, progressPct: number, completedSteps?: (number | string)[]): Promise<void> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/student/roadmap/${roadmapId}/progress`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ progressPct, completedSteps }),
   });
   if (!res.ok) throw new Error("Request failed");
@@ -464,15 +418,10 @@ export interface MockInterviewEvaluateResponse {
 }
 
 export async function generateMockInterviewRequest(targetRole: string): Promise<MockInterviewGenerateResponse> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/mock-interview/generate`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ target_role: targetRole }),
   });
 
@@ -485,15 +434,10 @@ export async function generateMockInterviewRequest(targetRole: string): Promise<
 }
 
 export async function evaluateMockInterviewRequest(targetRole: string, qaPairs: QuestionAnswer[]): Promise<MockInterviewEvaluateResponse> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/mock-interview/evaluate`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ target_role: targetRole, qa_pairs: qaPairs }),
   });
 
@@ -506,11 +450,9 @@ export async function evaluateMockInterviewRequest(targetRole: string, qaPairs: 
 }
 
 export async function getMockInterviewsRequest(): Promise<{ interviews: MockInterviewEvaluateResponse[] }> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/mock-interview`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -524,10 +466,8 @@ export async function getMockInterviewsRequest(): Promise<{ interviews: MockInte
 /* --------------------- Portfolio API --------------------- */
 
 export async function getPortfolioRequest(): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/student/portfolio`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) throw new Error("Request failed");
   const data = await res.json();
@@ -535,11 +475,9 @@ export async function getPortfolioRequest(): Promise<any> {
 }
 
 export async function linkPortfolioRequest(githubUsername: string): Promise<GitHubPortfolio> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/student/portfolio/link`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ github_username: githubUsername }),
   });
   if (!res.ok) {
@@ -553,10 +491,8 @@ export async function linkPortfolioRequest(githubUsername: string): Promise<GitH
 /* --------------------- Certificates API --------------------- */
 
 export async function getCertificatesRequest(): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/student/certificates`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) throw new Error("Request failed");
   const data = await res.json();
@@ -564,8 +500,6 @@ export async function getCertificatesRequest(): Promise<any> {
 }
 
 export async function uploadCertificateRequest(title: string, issuer: string, file: File): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const formData = new FormData();
   formData.append("title", title);
@@ -574,7 +508,7 @@ export async function uploadCertificateRequest(title: string, issuer: string, fi
 
   const res = await fetch(`${API_BASE}/api/v1/student/certificates`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
     body: formData,
   });
 
@@ -584,11 +518,9 @@ export async function uploadCertificateRequest(title: string, issuer: string, fi
 }
 
 export async function deleteCertificateRequest(id: string): Promise<void> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/student/certificates/${id}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) throw new Error("Request failed");
 }
@@ -596,10 +528,8 @@ export async function deleteCertificateRequest(id: string): Promise<void> {
 /* --------------------- Profile API --------------------- */
 
 export async function getProfileRequest(): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/student/profile`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) throw new Error("Request failed");
   const data = await res.json();
@@ -607,11 +537,9 @@ export async function getProfileRequest(): Promise<any> {
 }
 
 export async function updateProfileRequest(data: any): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
   const res = await fetch(`${API_BASE}/api/v1/student/profile`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Request failed");
@@ -636,11 +564,9 @@ export interface GitHubPortfolio {
 }
 
 export async function getLatestResumeRequest(): Promise<ResumeParseResult | null> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/resume`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -669,11 +595,9 @@ export async function getLatestResumeRequest(): Promise<ResumeParseResult | null
 }
 
 export async function getLatestSkillGapRequest(): Promise<SkillGapResult | null> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/skill-gap`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -696,12 +620,10 @@ export interface CoverLetter {
 }
 
 export async function generateCoverLetterRequest(jobDescription: string): Promise<CoverLetter> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/cover-letter/generate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ jobDescription }),
   });
   if (!res.ok) {
@@ -713,11 +635,9 @@ export async function generateCoverLetterRequest(jobDescription: string): Promis
 }
 
 export async function listCoverLettersRequest(): Promise<CoverLetter[]> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/cover-letter`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) throw new Error("Request failed");
   const data = await res.json();
@@ -742,11 +662,9 @@ export interface DailyChallenge {
 }
 
 export async function getDailyChallengeRequest(): Promise<DailyChallenge> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/daily-challenge`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   if (!res.ok) throw new Error("Request failed");
   const data = await res.json();
@@ -754,12 +672,10 @@ export async function getDailyChallengeRequest(): Promise<DailyChallenge> {
 }
 
 export async function submitDailyChallengeRequest(answers: number[]): Promise<DailyChallenge> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/daily-challenge/submit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ answers }),
   });
   if (!res.ok) throw new Error("Request failed");
@@ -768,11 +684,9 @@ export async function submitDailyChallengeRequest(answers: number[]): Promise<Da
 }
 
 export async function getReadinessHistoryRequest(): Promise<ReadinessScoreResult[]> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/readiness/history`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -785,15 +699,10 @@ export async function getReadinessHistoryRequest(): Promise<ReadinessScoreResult
 }
 
 export async function generateStudyMaterialRequest(roadmapId: string, phaseIdx: number, subtaskIdx: number, forceRegenerate: boolean = false): Promise<any> {
-  const token = localStorage.getItem("careeros_token");
-  if (!token) throw new Error("Not logged in");
 
   const res = await fetch(`${API_BASE}/api/v1/student/roadmap/${roadmapId}/material`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" }, credentials: "include",
     body: JSON.stringify({ phaseIdx, subtaskIdx, forceRegenerate }),
   });
 
@@ -804,4 +713,14 @@ export async function generateStudyMaterialRequest(roadmapId: string, phaseIdx: 
 
   const data = await res.json();
   return data.material;
+}
+
+export async function logoutRequest(): Promise<void> {
+  await fetch(`${API_BASE}/api/v1/auth/logout`, { method: "POST", credentials: "include" });
+}
+
+export async function getMeRequest(): Promise<{user: {id:string, email:string, name:string, role:string}}> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/me`, { credentials: "include" });
+  if (!res.ok) throw new Error("Not logged in");
+  return res.json();
 }

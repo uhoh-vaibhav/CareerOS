@@ -102,6 +102,22 @@ export default function SkillGapPage() {
               </div>
             )}
 
+            {result?.isStale && (
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-amber-800 font-bold">Analysis Outdated</p>
+                  <p className="text-xs text-amber-700 mt-0.5">{result.staleReason || "Your resume or target role has updated since this analysis was generated."}</p>
+                </div>
+                <button
+                  onClick={handleAnalyze}
+                  disabled={loading}
+                  className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm whitespace-nowrap self-start sm:self-auto"
+                >
+                  Re-analyze Now
+                </button>
+              </div>
+            )}
+
             {initialLoad && !result && (
               <div className="flex justify-center items-center h-40">
                 <p className="text-sm text-gray-400 font-bold animate-pulse tracking-widest uppercase">Fetching Data...</p>

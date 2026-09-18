@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
+import cookieParser from "cookie-parser";
 
 import { env } from "./config/env";
 import { healthRouter } from "./modules/health/health.routes";
@@ -25,23 +26,51 @@ import { recruiterRouter } from "./modules/recruiter/recruiter.routes";
 import { placementRouter } from "./modules/placement/placement.routes";
 import { facultyRouter } from "./modules/faculty/faculty.routes";
 
+import rateLimit from "express-rate-limit";
+
 export function createApp() {
   const app = express();
 
+  // Basic Rate Limiting
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 500, // Limit each IP to 500 requests per windowMs
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests from this IP, please try again later." }
+  });
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20, // Stricter limit for auth endpoints
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many login attempts, please try again later." }
+  });
+
+  // Enable all Helmet protections, customized for our CORS setup
   app.use(helmet({ 
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    crossOriginEmbedderPolicy: false,
-    frameguard: false,
-    contentSecurityPolicy: false
   }));
   app.use(cors({ origin: env.corsOrigin, credentials: true }));
   app.use(express.json());
+  app.use(cookieParser());
   app.use(morgan(env.nodeEnv === "development" ? "dev" : "combined"));
 
-  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+  // Serve uploaded files securely (prevent execution in browser)
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
+    setHeaders: (res, path) => {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      // Prevent inline XSS if someone uploads an HTML file posing as a PDF/image
+      res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+    }
+  }));
+
+  // Apply general rate limit to all /api routes
+  app.use("/api", apiLimiter);
 
   app.use("/health", healthRouter);
-  app.use("/api/v1/auth", authRouter);
+  app.use("/api/v1/auth", authLimiter, authRouter);
   app.use("/api/v1/admin", adminRouter);
   app.use("/api/v1/student/resume", resumeRouter);
   app.use("/api/v1/student/skill-gap", skillGapRouter);

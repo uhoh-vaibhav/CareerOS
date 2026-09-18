@@ -4,12 +4,15 @@ import { useState, useRef, useEffect } from "react";
 import { Sidebar, STUDENT_LINKS } from "@/components/Sidebar";
 import { TopNav } from "@/components/TopNav";
 import { Card } from "@/components/Card";
-import { generateMockInterviewRequest, evaluateMockInterviewRequest, MockInterviewEvaluateResponse, QuestionAnswer } from "@/lib/api";
+import { generateMockInterviewRequest, evaluateMockInterviewRequest, MockInterviewEvaluateResponse, QuestionAnswer, getProfileRequest } from "@/lib/api";
 
 const KNOWN_ROLES = [
-  "Software Engineer", "Backend Developer", "Frontend Developer", 
-  "Full Stack Developer", "Data Scientist", "Machine Learning Engineer",
-  "DevOps Engineer", "Product Manager"
+  "Backend Developer", "Frontend Developer", "Full Stack Developer", "Software Engineer", 
+  "Mobile App Developer", "Android Developer", "iOS Developer", "Data Analyst", 
+  "Data Scientist", "Data Engineer", "Machine Learning Engineer", "AI Engineer", 
+  "DevOps Engineer", "Cloud Engineer", "Site Reliability Engineer", "Cybersecurity Analyst", 
+  "Penetration Tester", "QA Engineer", "UI/UX Designer", "Product Manager", 
+  "Database Administrator", "Blockchain Developer", "Network Engineer", "Business Analyst"
 ];
 
 function formatTime(seconds: number) {
@@ -20,6 +23,7 @@ function formatTime(seconds: number) {
 
 export default function MockInterviewPage() {
   const [targetRole, setTargetRole] = useState(KNOWN_ROLES[0]);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<string[]>([]);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
@@ -39,6 +43,18 @@ export default function MockInterviewPage() {
     }
     return () => clearInterval(timer);
   }, [questions.length, result, loading]);
+
+  // Auto-fill target role from the user's profile (set during Skill Gap analysis)
+  useEffect(() => {
+    getProfileRequest()
+      .then((profile: any) => {
+        if (profile.targetRole && profile.targetRole.trim()) {
+          setTargetRole(profile.targetRole);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setProfileLoaded(true));
+  }, []);
 
   useEffect(() => {
     return () => {

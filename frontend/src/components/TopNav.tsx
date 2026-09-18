@@ -1,26 +1,33 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { getProfileRequest } from "@/lib/api";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getProfileRequest, logoutRequest, getMeRequest } from "@/lib/api";
 
-export function TopNav({ role }: { role: string }) {
+interface TopNavProps {
+  role: string;
+}
+
+export function TopNav({ role }: TopNavProps) {
   const router = useRouter();
-  const [email, setEmail] = useState<string | null>(null);
-  const [name, setName] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("careeros_token");
-    if (token) {
-      try {
-        const payloadStr = atob(token.split(".")[1].replace(/-/g, '+').replace(/_/g, '/'));
-        const payload = JSON.parse(payloadStr);
-        // Backend JWT does not contain email, so we just use role-based fallback if profile fetch fails
-        setEmail(payload.email || (role === "Student" ? "Student" : "User"));
-      } catch (e) {}
-    }
-    // Only fetch student profile for STUDENT role to avoid 403
+    // 1) Fetch current user details via the cookie-authenticated /me endpoint
+    getMeRequest()
+      .then(data => {
+        if (data.user.email) setEmail(data.user.email);
+        if (data.user.name) setName(data.user.name);
+      })
+      .catch(() => {
+        // If not authenticated, we could redirect to login here,
+        // but for now just let the role logic handle fallbacks
+        setEmail(role === "Student" ? "Student" : "User");
+      });
+
+    // 2) If student, fetch profile which might have more recent name
     if (role === "Student") {
       getProfileRequest().then(profile => {
         if (profile.name) setName(profile.name);
@@ -29,8 +36,11 @@ export function TopNav({ role }: { role: string }) {
     }
   }, [role]);
 
-  function handleLogout() {
-    localStorage.removeItem("careeros_token");
+  async function handleLogout() {
+    try {
+      await logoutRequest();
+    } catch (e) {}
+    localStorage.removeItem("careeros_token"); // Cleanup legacy
     router.push("/");
   }
   

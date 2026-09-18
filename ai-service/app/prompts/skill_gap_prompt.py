@@ -10,6 +10,7 @@ The expected JSON schema is:
   "readinessScore": number (0-100),
   "detectedSkills": ["string"],
   "matchedSkills": ["string"],
+  "transferableSkills": ["string"],
   "missingSkills": [
     { "name": "string", "priority": "critical|high|medium|low", "category": "string" }
   ],

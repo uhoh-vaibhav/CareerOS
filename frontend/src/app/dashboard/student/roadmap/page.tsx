@@ -198,6 +198,21 @@ export default function RoadmapPage() {
               {roadmap && <p className="text-sm font-medium text-gray-500 mt-1">Preparing for: <span className="font-bold text-blue-600">{roadmap.targetRole}</span></p>}
             </div>
 
+            {roadmap?.isStale && (
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-amber-800 font-bold">Roadmap Outdated</p>
+                  <p className="text-xs text-amber-700 mt-0.5">{roadmap.staleReason || "Your resume or target role has updated since this roadmap was generated."}</p>
+                </div>
+                <Link
+                  href="/dashboard/student/skill-gap"
+                  className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm whitespace-nowrap self-start sm:self-auto"
+                >
+                  Update Roadmap in Skill Gap
+                </Link>
+              </div>
+            )}
+
             {loading && (
               <div className="flex flex-col gap-6 lg:flex-row animate-pulse">
                 <div className="flex-1 space-y-4">

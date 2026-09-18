@@ -29,9 +29,14 @@ async def generate_questions(target_role: str, student_context: str | None = Non
             cleaned = cleaned.split("```")[1].split("```")[0].strip()
             
         data = json.loads(cleaned)
-        return MockInterviewGenerateResponse(questions=data.get("questions", []))
-    except Exception:
-        return MockInterviewGenerateResponse(questions=["Could not generate questions. Please try again."])
+        questions = data.get("questions", [])
+        if not questions:
+            raise ValueError("No questions found in AI output")
+        return MockInterviewGenerateResponse(questions=questions)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to parse interview questions: {e}")
+        raise HTTPException(status_code=502, detail="Failed to parse interview questions from AI.")
 
 async def evaluate_answers(target_role: str, qa_pairs: list[QuestionAnswer]) -> MockInterviewEvaluateResponse:
     llm = get_llm_provider()
@@ -55,11 +60,15 @@ async def evaluate_answers(target_role: str, qa_pairs: list[QuestionAnswer]) -> 
             cleaned = cleaned.split("```")[1].split("```")[0].strip()
             
         data = json.loads(cleaned)
+        if "score" not in data:
+            raise ValueError("Score missing in AI evaluation")
         return MockInterviewEvaluateResponse(
-            score=data.get("score", 50),
-            confidence_score=data.get("confidence_score", None),
+            score=max(0, min(100, int(data["score"]))),
+            confidence_score=int(data["confidence_score"]) if data.get("confidence_score") is not None else None,
             communication_feedback=data.get("communication_feedback", None),
             feedback=data.get("feedback", "No feedback provided.")
         )
-    except Exception:
-        return MockInterviewEvaluateResponse(score=50, feedback="Failed to parse AI evaluation.")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to parse interview evaluation: {e}")
+        raise HTTPException(status_code=502, detail="Failed to parse AI interview evaluation.")

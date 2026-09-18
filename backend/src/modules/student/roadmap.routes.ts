@@ -10,3 +10,4 @@ roadmapRouter.get("/history", requireAuth, requireRole("STUDENT"), history);
 roadmapRouter.patch("/:id/progress", requireAuth, requireRole("STUDENT"), updateProgress);
 
 roadmapRouter.post("/:id/material", requireAuth, requireRole("STUDENT"), generateMaterial);
+roadmapRouter.post("/:id/study-material", requireAuth, requireRole("STUDENT"), generateMaterial);

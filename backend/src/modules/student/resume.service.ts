@@ -5,6 +5,9 @@ import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { ApiError } from "../../middleware/errorHandler";
 
+import { validateFileSignature } from "../../utils/fileSecurity";
+import { computeReadinessScore } from "./readiness.service";
+
 const UPLOAD_DIR = path.join(process.cwd(), "uploads", "resumes");
 
 interface UploadedFile {
@@ -64,6 +67,9 @@ export async function uploadAndParseResume(userId: string, file: UploadedFile) {
     throw new ApiError(400, "Only PDF and plain text resumes are supported right now");
   }
 
+  // Phase 4: Validate magic bytes to prevent masquerading files
+  validateFileSignature(file.buffer, file.mimetype);
+
   const resumeText = await extractText(file);
   if (!resumeText.trim()) {
     throw new ApiError(400, "Could not extract any text from the uploaded file");
@@ -87,6 +93,9 @@ export async function uploadAndParseResume(userId: string, file: UploadedFile) {
     where: { id: profile.id },
     data: { skills: parsed.skills },
   });
+
+  // Automatically refresh career readiness score
+  await computeReadinessScore(userId).catch(() => {});
 
   return { resume, parsed };
 }

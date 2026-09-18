@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { ApiError } from "../../middleware/errorHandler";
+import { computeReadinessScore } from "./readiness.service";
 
 interface AiSkillGapResult {
   missing_skills: string[];
@@ -62,6 +63,15 @@ export async function analyzeSkillGap(userId: string, targetRole: string) {
     include: { roadmap: true },
   });
 
+  // Sync targetRole to profile so other features (Mock Interview, Daily Challenge, etc.) can use it
+  await prisma.studentProfile.update({
+    where: { id: profile.id },
+    data: { targetRole },
+  });
+
+  // Automatically refresh career readiness score
+  await computeReadinessScore(userId).catch(() => {});
+
   return { report, currentSkills };
 }
 
@@ -91,10 +101,36 @@ async function callAiSkillGapService(
 export async function listSkillGapReports(userId: string) {
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
-    include: { skillGapReports: { include: { roadmap: true }, orderBy: { createdAt: "desc" } } },
+    include: {
+      resumes: { orderBy: { createdAt: "desc" }, take: 1 },
+      skillGapReports: { include: { roadmap: true }, orderBy: { createdAt: "desc" } }
+    },
   });
   if (!profile) {
     throw new ApiError(404, "Student profile not found for this user");
   }
-  return { reports: profile.skillGapReports, currentSkills: (profile.skills as string[]) || [] };
+
+  const latestReport = profile.skillGapReports[0];
+  const latestResume = profile.resumes[0];
+
+  let isStale = false;
+  let staleReason: string | null = null;
+
+  if (latestReport) {
+    if (latestResume && latestReport.resumeId && latestReport.resumeId !== latestResume.id) {
+      isStale = true;
+      staleReason = "A newer resume has been uploaded since this analysis was generated.";
+    } else if (profile.targetRole && latestReport.targetRole.toLowerCase() !== profile.targetRole.toLowerCase()) {
+      isStale = true;
+      staleReason = `Your target role was updated to "${profile.targetRole}".`;
+    }
+  }
+
+  return {
+    reports: profile.skillGapReports,
+    currentSkills: (profile.skills as string[]) || [],
+    isStale,
+    staleReason,
+    targetRole: profile.targetRole ?? null,
+  };
 }

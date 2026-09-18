@@ -299,71 +299,99 @@ RESOURCE_SUGGESTIONS: dict[str, list[str]] = {
 
 
 async def analyze_skill_gap(payload: SkillGapRequest) -> SkillGapResponse:
-    # Step: fetch required-skill profile for target role
+    import json
+    import logging
+    from app.prompts.skill_gap_prompt import SYSTEM_PROMPT
+
     required = ROLE_SKILL_PROFILES.get(payload.target_role.lower(), [])
     possessed = {s.lower() for s in payload.current_skills}
+    missing_baseline = [skill for skill in required if skill not in possessed]
 
-    # Step: compute set difference (required - possessed)
-    missing = [skill for skill in required if skill not in possessed]
+    prompt = (
+        f"Target Role: {payload.target_role}\n"
+        f"Candidate's Current Detected Skills: {', '.join(payload.current_skills) if payload.current_skills else 'None detected'}\n"
+        f"Typical Skills Required for this Role: {', '.join(required) if required else 'Standard industry requirements for ' + payload.target_role}\n"
+        f"Baseline Missing Skills: {', '.join(missing_baseline) if missing_baseline else 'None'}\n\n"
+        "Provide the complete SkillGapResult JSON matching the schema strictly."
+    )
 
     llm = get_llm_provider()
-    if missing:
-        prompt = (
-            f"Target role: {payload.target_role}\n"
-            f"Missing skills: {', '.join(missing)}"
-        )
-        
-        try:
-            raw = await llm.generate(prompt, system=ROADMAP_SYSTEM_PROMPT)
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"LLM generation failed: {e}")
-            raise HTTPException(status_code=502, detail="AI analysis is temporarily unavailable.")
-        
-        import json
-        try:
-            cleaned = raw.strip()
-            if cleaned.startswith("```"):
-                cleaned = cleaned.split("\n", 1)[1]
-                cleaned = cleaned.rsplit("```", 1)[0]
-            milestones = json.loads(cleaned)
-            if not isinstance(milestones, list):
-                raise ValueError("Not a list")
-            roadmap = json.dumps(milestones)
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to parse roadmap: {e}")
-            raise HTTPException(status_code=502, detail="AI analysis is temporarily unavailable.")
-    else:
-        roadmap = "[]"
+    try:
+        raw = await llm.generate(prompt, system=SYSTEM_PROMPT)
+    except Exception as e:
+        logging.getLogger(__name__).error(f"LLM generation failed: {e}")
+        raise HTTPException(status_code=502, detail="AI analysis is temporarily unavailable.")
 
-    return SkillGapResponse(missing_skills=missing, roadmap=roadmap)
+    try:
+        cleaned = raw.strip()
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        try:
+            data = json.loads(cleaned, strict=False)
+        except Exception:
+            import re
+            cleaned_repaired = re.sub(r'\\(?![/"\\bfnrtu])', r'\\\\', cleaned)
+            data = json.loads(cleaned_repaired, strict=False)
+
+        # Extract roadmap
+        roadmap_list = data.get("roadmap", [])
+        roadmap_str = json.dumps(roadmap_list)
+
+        # Extract missing skill names for flat list
+        raw_missing = data.get("missingSkills", [])
+        missing_names = []
+        for item in raw_missing:
+            if isinstance(item, dict) and "name" in item:
+                missing_names.append(item["name"])
+            elif isinstance(item, str):
+                missing_names.append(item)
+        if not missing_names:
+            missing_names = missing_baseline
+
+        return SkillGapResponse(raw_json=data, missing_skills=missing_names, roadmap=roadmap_str)
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Failed to parse skill gap analysis: {e}")
+        raise HTTPException(status_code=502, detail="Failed to parse AI skill gap response.")
+
 
 async def generate_study_material(payload: StudyMaterialRequest) -> StudyMaterialResponse:
-    from app.schemas.study import StudyMaterialResponse
-    from app.prompts.skill_gap_prompt import STUDY_MATERIAL_PROMPT
-    from app.adapters.llm.factory import get_llm_provider
     import json
-    from fastapi import HTTPException
-    
+    import logging
+    from app.prompts.skill_gap_prompt import STUDY_MATERIAL_PROMPT
+    from app.schemas.study import StudyMaterialResponse
+
     llm = get_llm_provider()
-    
-    prompt = f"Role: {payload.target_role}\nPhase: {payload.phase}\nMilestone: {payload.milestone}\nSkills: {', '.join(payload.skills)}\nObjectives: {', '.join(payload.objectives)}\n\nGenerate strict JSON."
-    
+
+    prompt = (
+        f"Role: {payload.target_role}\n"
+        f"Phase: {payload.phase_title}\n"
+        f"Milestone: {payload.milestone_title}\n"
+        f"Milestone Description: {payload.milestone_description}\n"
+        f"Skills to Cover: {', '.join(payload.skills) if payload.skills else 'Core concepts'}\n\n"
+        "Generate comprehensive study material as strict JSON matching the schema."
+    )
+
     try:
         raw = await llm.generate(prompt, system=STUDY_MATERIAL_PROMPT)
     except Exception as e:
-        import logging
         logging.getLogger(__name__).error(f"LLM generation failed: {e}")
         raise HTTPException(status_code=502, detail="AI analysis is temporarily unavailable.")
-        
+
     try:
         cleaned = raw.strip()
-        if "`json" in cleaned:
-            cleaned = cleaned.split("`json")[1].split("`")[0].strip()
-        elif "`" in cleaned:
-            cleaned = cleaned.split("`")[1].split("`")[0].strip()
-        data = json.loads(cleaned)
-        return StudyMaterialResponse(**data)
-    except Exception:
-        raise HTTPException(status_code=502, detail="Failed to parse AI output.")
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned:
+            cleaned = cleaned.split("```")[1].split("```")[0].strip()
+
+        try:
+            data = json.loads(cleaned, strict=False)
+        except Exception:
+            import re
+            cleaned_repaired = re.sub(r'\\(?![/"\\bfnrtu])', r'\\\\', cleaned)
+            data = json.loads(cleaned_repaired, strict=False)
+
+        return StudyMaterialResponse(material=data)
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Failed to parse study material: {e}")
+        raise HTTPException(status_code=502, detail="Failed to parse study material output.")

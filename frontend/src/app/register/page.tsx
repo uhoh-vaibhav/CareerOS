@@ -17,7 +17,7 @@ export default function RegisterPage() {
     setError("");
     try {
       const res = await registerRequest(name, email, password, role);
-      localStorage.setItem("careeros_token", res.token);
+      
       
       const userRole = res.user.role;
       if (userRole === "STUDENT") router.push("/dashboard/student");

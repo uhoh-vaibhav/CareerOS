@@ -113,12 +113,11 @@ export default function OverviewPage() {
     nbaButton = "Start Mock Interview";
   }
 
-  // Assessed checks (backend defaults to 0, we want to show '-' if unassessed)
-  const isAssessedResume = !!resume;
-  const isAssessedSkill = !!skillGap;
-  const isAssessedPortfolio = !!portfolio;
-  // We don't fetch mock interview history yet, but we can guess from scoreData breakdown
-  const isAssessedInterview = scoreData && scoreData.breakdown.interview > 0; // rough proxy
+  // Assessed checks: accurately reflect whether each dimension has actually been evaluated
+  const isAssessedResume = scoreData?.breakdown?.ats !== null && scoreData?.breakdown?.ats !== undefined ? true : !!resume;
+  const isAssessedSkill = scoreData?.breakdown?.skillGap !== null && scoreData?.breakdown?.skillGap !== undefined ? true : !!skillGap;
+  const isAssessedInterview = scoreData?.breakdown?.interview !== null && scoreData?.breakdown?.interview !== undefined;
+  const isAssessedPortfolio = scoreData?.breakdown?.portfolio !== null && scoreData?.breakdown?.portfolio !== undefined ? true : !!portfolio;
 
   // History trend
   const scoreDiff = history.length >= 2 

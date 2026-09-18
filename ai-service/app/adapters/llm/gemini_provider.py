@@ -44,28 +44,46 @@ class GeminiProvider(LLMProvider):
                 "parts": [{"text": system}]
             }
 
-        try:
-            async with httpx.AsyncClient(timeout=90) as client:
-                resp = await client.post(url, json=body)
-                resp.raise_for_status()
-                data = resp.json()
+        import asyncio
+        models_to_try = [self._model]
+        if "3.1-flash-lite" not in self._model:
+            models_to_try.append("gemini-3.1-flash-lite")
 
-                # Extract text from the response
-                candidates = data.get("candidates", [])
-                if not candidates:
-                    logger.error("Gemini returned no candidates: %s", data)
-                    raise RuntimeError("Gemini returned no candidates")
+        last_err = None
+        for current_model in models_to_try:
+            url = f"{self.BASE_URL}/{current_model}:generateContent?key={self._api_key}"
+            for attempt in range(2):
+                try:
+                    async with httpx.AsyncClient(timeout=90) as client:
+                        resp = await client.post(url, json=body)
+                        if resp.status_code in (503, 429):
+                            logger.warning("Gemini %s returned %d on attempt %d", current_model, resp.status_code, attempt + 1)
+                            await asyncio.sleep(1)
+                            continue
+                        resp.raise_for_status()
+                        data = resp.json()
 
-                content = candidates[0]["content"]["parts"][0]["text"]
-                logger.debug("Gemini response received (%d chars)", len(content))
-                return content
+                        candidates = data.get("candidates", [])
+                        if not candidates:
+                            logger.error("Gemini returned no candidates: %s", data)
+                            raise RuntimeError("Gemini returned no candidates")
 
-        except httpx.HTTPStatusError as e:
-            logger.error("Gemini API error %s: %s", e.response.status_code, e.response.text[:300])
-            raise RuntimeError(f"Gemini API returned {e.response.status_code}") from e
-        except httpx.TimeoutException:
-            logger.error("Gemini API request timed out")
-            raise RuntimeError("Gemini API request timed out after 60s")
-        except Exception as e:
-            logger.error("Gemini unexpected error: %s", e)
-            raise
+                        content = candidates[0]["content"]["parts"][0]["text"]
+                        logger.debug("Gemini response received from %s (%d chars)", current_model, len(content))
+                        return content
+
+                except (httpx.TimeoutException, httpx.NetworkError) as e:
+                    last_err = e
+                    logger.warning("Network error for %s on attempt %d: %s", current_model, attempt + 1, e)
+                    await asyncio.sleep(1)
+                except httpx.HTTPStatusError as e:
+                    last_err = e
+                    if e.response.status_code not in (503, 429):
+                        logger.error("Gemini %s API error %s: %s", current_model, e.response.status_code, e.response.text[:300])
+                        raise RuntimeError(f"Gemini API returned {e.response.status_code}") from e
+                except Exception as e:
+                    last_err = e
+                    logger.error("Gemini unexpected error: %s", e)
+                    raise
+
+        raise RuntimeError(f"Gemini API failed across models {models_to_try}: {last_err}")

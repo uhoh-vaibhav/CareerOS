@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { ApiError } from "../../middleware/errorHandler";
+import { computeReadinessScore } from "./readiness.service";
 
 export async function linkAndAnalyzePortfolio(userId: string, githubUsername: string) {
   const profile = await prisma.studentProfile.findUnique({ where: { userId } });
@@ -32,11 +33,16 @@ export async function linkAndAnalyzePortfolio(userId: string, githubUsername: st
   }));
 
   // Analyze via AI Service
-  const aiRes = await fetch(`${env.aiServiceUrl}/portfolio/analyze`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ github_username: githubUsername, repos: repoData }),
-  });
+  let aiRes: Response;
+  try {
+    aiRes = await fetch(`${env.aiServiceUrl}/portfolio/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ github_username: githubUsername, repos: repoData }),
+    });
+  } catch (e) {
+    throw new ApiError(502, "AI service unreachable.");
+  }
 
   if (!aiRes.ok) {
     throw new ApiError(502, "AI service failed to analyze portfolio.");
@@ -57,6 +63,9 @@ export async function linkAndAnalyzePortfolio(userId: string, githubUsername: st
       analysisJson: aiResult,
     }
   });
+
+  // Automatically refresh career readiness score
+  await computeReadinessScore(userId).catch(() => {});
 
   return portfolio;
 }

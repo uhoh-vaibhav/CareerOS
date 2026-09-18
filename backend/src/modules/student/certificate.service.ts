@@ -3,6 +3,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { prisma } from "../../lib/prisma";
 import { ApiError } from "../../middleware/errorHandler";
+import { validateFileSignature } from "../../utils/fileSecurity";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads", "certificates");
 
@@ -26,6 +27,9 @@ export async function addCertificate(userId: string, title: string, issuer?: str
     if (!allowedMimes.includes(file.mimetype) || !allowedExts.includes(ext)) {
       throw new ApiError(400, "Only PDF, JPEG, and PNG files are allowed");
     }
+
+    // Phase 4: Verify magic numbers to ensure they match the mimetype
+    validateFileSignature(file.buffer, file.mimetype);
 
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
     const filename = `${randomUUID()}${ext}`;

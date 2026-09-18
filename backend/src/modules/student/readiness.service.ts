@@ -13,10 +13,10 @@ const WEIGHTS = {
 } as const;
 
 interface Breakdown {
-  ats: number;
-  skillGap: number;
-  interview: number;
-  portfolio: number;
+  ats: number | null;
+  skillGap: number | null;
+  interview: number | null;
+  portfolio: number | null;
 }
 
 /**
@@ -24,12 +24,13 @@ interface Breakdown {
  * aggregating the student's latest data across four dimensions:
  *
  *   ATS score         (30%) — from their most recent parsed resume
- *   Skill-gap score   (30%) — inverse of missing skills count from latest report
+ *   Skill-gap score   (30%) — from latest skill gap report
  *   Interview score   (20%) — from their most recent mock interview
- *   Portfolio score   (20%) — from their GitHub portfolio analysis (future)
+ *   Portfolio score   (20%) — from their GitHub portfolio analysis
  *
- * Dimensions with no data default to 0, so the score naturally grows
- * as the student completes more activities on the platform.
+ * Dimensions with no data are explicitly marked null ("Not Assessed").
+ * The composite score normalizes weights across assessed dimensions only,
+ * preventing unattempted features from unfairly penalizing the user.
  */
 export async function computeReadinessScore(userId: string) {
   const profile = await prisma.studentProfile.findUnique({
@@ -48,46 +49,54 @@ export async function computeReadinessScore(userId: string) {
 
   // --- ATS dimension ---
   const latestResume = profile.resumes[0];
-  const ats = latestResume?.atsScore ?? 0;
+  const ats: number | null = latestResume && typeof latestResume.atsScore === "number" ? latestResume.atsScore : null;
 
   // --- Skill-gap dimension ---
-  // Fewer missing skills → higher readiness.
-  // Formula: 100 - (missingCount × 10), clamped to [0, 100].
   const latestReport = profile.skillGapReports[0];
-  let skillGap = 0;
+  let skillGap: number | null = null;
   if (latestReport) {
     const rawMissing = latestReport.missingSkills as any;
-    const missing = Array.isArray(rawMissing)
-      ? rawMissing
-      : Array.isArray(rawMissing?.missingSkills)
-      ? rawMissing.missingSkills
-      : [];
-    skillGap = Math.max(0, Math.min(100, 100 - missing.length * 10));
+    if (typeof rawMissing?.readinessScore === "number") {
+      skillGap = Math.max(0, Math.min(100, Math.round(rawMissing.readinessScore)));
+    } else {
+      const missing = Array.isArray(rawMissing)
+        ? rawMissing
+        : Array.isArray(rawMissing?.missingSkills)
+        ? rawMissing.missingSkills
+        : [];
+      skillGap = Math.max(0, Math.min(100, 100 - missing.length * 10));
+    }
   }
 
   // --- Interview dimension ---
   const latestInterview = profile.mockInterviews[0];
-  const interview = latestInterview?.score ?? 0;
+  const interview: number | null = latestInterview && typeof latestInterview.score === "number" ? latestInterview.score : null;
 
   // --- Portfolio dimension ---
-  // Future: derive a score from GitHubPortfolio.analysisJson.
-  // For now, 0 until the portfolio feature is built.
   const portfolioData = profile.portfolio;
-  const portfolio = portfolioData?.analysisJson
+  const portfolio: number | null = portfolioData?.analysisJson
     ? extractPortfolioScore(portfolioData.analysisJson)
-    : 0;
+    : null;
 
   const breakdown: Breakdown = { ats, skillGap, interview, portfolio };
 
-  const compositeScore = Math.min(
-    100,
-    Math.round(
-      breakdown.ats * WEIGHTS.ats +
-        breakdown.skillGap * WEIGHTS.skillGap +
-        breakdown.interview * WEIGHTS.interview +
-        breakdown.portfolio * WEIGHTS.portfolio
-    )
+  // Calculate composite score dynamically normalized across assessed dimensions
+  const rawDims: { score: number | null; weight: number }[] = [
+    { score: ats, weight: WEIGHTS.ats },
+    { score: skillGap, weight: WEIGHTS.skillGap },
+    { score: interview, weight: WEIGHTS.interview },
+    { score: portfolio, weight: WEIGHTS.portfolio },
+  ];
+  const assessedDimensions = rawDims.filter(
+    (d): d is { score: number; weight: number } => d.score !== null
   );
+
+  let compositeScore = 0;
+  if (assessedDimensions.length > 0) {
+    const totalWeight = assessedDimensions.reduce((sum, d) => sum + d.weight, 0);
+    const weightedSum = assessedDimensions.reduce((sum, d) => sum + d.score * d.weight, 0);
+    compositeScore = Math.min(100, Math.max(0, Math.round(weightedSum / totalWeight)));
+  }
 
   // Persist the computed score so we can show history/trends.
   const score = await prisma.readinessScore.create({
@@ -102,8 +111,8 @@ export async function computeReadinessScore(userId: string) {
 }
 
 /**
- * Returns the most recently computed readiness score, or null if the
- * student has never computed one.
+ * Returns the most recently computed readiness score, or computes one
+ * on-the-fly if none exists yet for this student.
  */
 export async function getLatestReadinessScore(userId: string) {
   const profile = await prisma.studentProfile.findUnique({
@@ -114,10 +123,14 @@ export async function getLatestReadinessScore(userId: string) {
     throw new ApiError(404, "Student profile not found for this user");
   }
 
-  const latest = await prisma.readinessScore.findFirst({
+  let latest = await prisma.readinessScore.findFirst({
     where: { profileId: profile.id },
     orderBy: { computedAt: "desc" },
   });
+
+  if (!latest) {
+    latest = await computeReadinessScore(userId);
+  }
 
   return latest;
 }

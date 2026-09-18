@@ -7,6 +7,6 @@ class SkillGapRequest(BaseModel):
     target_role: str
 
 class SkillGapResponse(BaseModel):
-    raw_json: Any
+    raw_json: Any = None
     missing_skills: list[str]
     roadmap: str

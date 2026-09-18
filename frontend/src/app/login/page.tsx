@@ -15,7 +15,7 @@ export default function LoginPage() {
     setError("");
     try {
       const res = await loginRequest(email, password);
-      localStorage.setItem("careeros_token", res.token);
+      
       
       const userRole = res.user.role;
       if (userRole === "STUDENT") router.push("/dashboard/student");
