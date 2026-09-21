@@ -19,7 +19,6 @@ import { mockInterviewRouter } from "./modules/student/mockInterview.routes";
 import { portfolioRouter } from "./modules/student/portfolio.routes";
 import { certificateRouter } from "./modules/student/certificate.routes";
 import { profileRouter } from "./modules/student/profile.routes";
-import { coverLetterRouter } from "./modules/student/coverLetter.routes";
 import { challengeRouter } from "./modules/student/challenge.routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { recruiterRouter } from "./modules/recruiter/recruiter.routes";
@@ -96,7 +95,6 @@ export function createApp() {
   app.use("/api/v1/student/portfolio", portfolioRouter);
   app.use("/api/v1/student/certificates", certificateRouter);
   app.use("/api/v1/student/profile", profileRouter);
-  app.use("/api/v1/student/cover-letter", coverLetterRouter);
   app.use("/api/v1/student/daily-challenge", challengeRouter);
   app.use("/api/v1/recruiter", recruiterRouter);
   app.use("/api/v1/placement", placementRouter);

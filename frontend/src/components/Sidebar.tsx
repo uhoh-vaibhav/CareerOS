@@ -14,7 +14,6 @@ export const STUDENT_LINKS: NavLink[] = [
   { label: "Roadmap", href: "/dashboard/student/roadmap" },
   { label: "AI Mentor", href: "/dashboard/student/mentor" },
   { label: "Mock Interview", href: "/dashboard/student/mock-interview" },
-  { label: "Cover Letters", href: "/dashboard/student/cover-letter" },
   { label: "Portfolio", href: "/dashboard/student/portfolio" },
   { label: "Certificates", href: "/dashboard/student/certificates" },
   { label: "Profile", href: "/dashboard/student/profile" },

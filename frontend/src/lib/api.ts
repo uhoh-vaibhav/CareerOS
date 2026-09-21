@@ -610,40 +610,6 @@ export async function getLatestSkillGapRequest(): Promise<SkillGapResult | null>
   return data.reports && data.reports.length > 0 ? { report: data.reports[0], currentSkills: data.currentSkills } : null;
 }
 
-/* --------------------- Cover Letter API --------------------- */
-
-export interface CoverLetter {
-  id: string;
-  jobDescription: string;
-  content: string;
-  createdAt: string;
-}
-
-export async function generateCoverLetterRequest(jobDescription: string): Promise<CoverLetter> {
-
-  const res = await fetch(`${API_BASE}/api/v1/student/cover-letter/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" }, credentials: "include",
-    body: JSON.stringify({ jobDescription }),
-  });
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.error || "Request failed");
-  }
-  const data = await res.json();
-  return data.coverLetter;
-}
-
-export async function listCoverLettersRequest(): Promise<CoverLetter[]> {
-
-  const res = await fetch(`${API_BASE}/api/v1/student/cover-letter`, {
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Request failed");
-  const data = await res.json();
-  return data.coverLetters;
-}
-
 /* --------------------- Daily Challenge API --------------------- */
 
 export interface DailyChallengeQuestion {
