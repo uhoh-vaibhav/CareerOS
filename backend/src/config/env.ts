@@ -10,6 +10,13 @@ function required(name: string, fallback?: string): string {
   return value;
 }
 
+function formatUrl(url: string): string {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    return `http://${url}`;
+  }
+  return url;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: parseInt(process.env.PORT ?? "4000", 10),
@@ -17,5 +24,5 @@ export const env = {
   jwtSecret: required("JWT_SECRET", process.env.NODE_ENV === "production" ? undefined : "dev-secret-change-me"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
-  aiServiceUrl: process.env.AI_SERVICE_URL ?? "http://localhost:8000",
+  aiServiceUrl: formatUrl(process.env.AI_SERVICE_URL ?? "http://localhost:8000"),
 };
