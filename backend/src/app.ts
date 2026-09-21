@@ -52,7 +52,22 @@ export function createApp() {
   app.use(helmet({ 
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }));
-  app.use(cors({ origin: env.corsOrigin, credentials: true }));
+  const configuredOrigins = (env.corsOrigin || "").split(",").map(o => o.trim());
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        configuredOrigins.includes("*") ||
+        configuredOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app") ||
+        origin.includes("localhost")
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+  }));
   app.use(express.json());
   app.use(cookieParser());
   app.use(morgan(env.nodeEnv === "development" ? "dev" : "combined"));

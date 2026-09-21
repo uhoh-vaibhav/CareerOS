@@ -13,10 +13,11 @@ const registerSchema = loginSchema.extend({
   name: z.string().min(2, "Name must be at least 2 characters").trim(),
 });
 
+const isProduction = process.env.NODE_ENV === "production";
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 };
 
@@ -46,8 +47,8 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
   try {
     res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict"
+      secure: isProduction,
+      sameSite: (isProduction ? "none" : "lax") as "none" | "lax"
     });
     res.status(200).json({ success: true });
   } catch (err) {
