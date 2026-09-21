@@ -126,14 +126,16 @@ async function saveFile(file: UploadedFile): Promise<string> {
 
 async function callAiParseService(resumeText: string): Promise<AiParseResult> {
   let res: Response;
+  const targetUrl = `${env.aiServiceUrl}/resume/parse`;
   try {
-    res = await fetch(`${env.aiServiceUrl}/resume/parse`, {
+    res = await fetch(targetUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resume_text: resumeText }),
     });
-  } catch (e) {
-    throw new ApiError(502, "AI service is unreachable");
+  } catch (e: any) {
+    console.error(`[AI Service Call Failed] Target: ${targetUrl}, Error: ${e?.message}`);
+    throw new ApiError(502, `AI service is unreachable at ${env.aiServiceUrl} (${e?.message || 'Connection failed'}). Please verify AI_SERVICE_URL on Render.`);
   }
 
   if (!res.ok) {
